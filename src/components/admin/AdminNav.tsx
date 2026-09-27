@@ -17,13 +17,14 @@ const items = [
   { href: "/admin/ranks", label: "رتبه‌های برتر", icon: Medal },
   { href: "/admin/content", label: "متن‌های سایت", icon: FileText },
   { href: "/admin/sms", label: "پیامک", icon: MessageSquareText },
-  { href: "/admin/payments", label: "پرداخت‌ها", icon: CreditCard },
+  { href: "/admin/payments", label: "پرداخت‌ها", icon: CreditCard, badge: "pay" },
   { href: "/admin/settings", label: "تنظیمات", icon: Settings },
 ];
 
 const isOn = (p: string, h: string) => (h === "/admin" ? p === "/admin" : p.startsWith(h));
 
-export function AdminNav({ pending }: { pending: number }) {
+export function AdminNav({ pending, payReview = 0 }: { pending: number; payReview?: number }) {
+  const count = (b?: string) => (b === "pending" ? pending : b === "pay" ? payReview : 0);
   const path = usePathname();
   return (
     <>
@@ -38,7 +39,7 @@ export function AdminNav({ pending }: { pending: number }) {
             <Link key={i.href} href={i.href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition ${isOn(path, i.href) ? "bg-gradient-to-l from-cyan/15 to-violet/15 text-white" : "text-white/55 hover:bg-white/5 hover:text-white"}`}>
               <i.icon className={`size-[18px] ${isOn(path, i.href) ? "text-cyan" : ""}`} />
               <span className="flex-1">{i.label}</span>
-              {i.badge && pending > 0 && <span className="rounded-full bg-amber px-2 text-[11px] font-black text-ink">{pending}</span>}
+              {count(i.badge) > 0 && <span className="rounded-full bg-amber px-2 text-[11px] font-black text-ink">{count(i.badge)}</span>}
             </Link>
           ))}
         </nav>
@@ -51,7 +52,7 @@ export function AdminNav({ pending }: { pending: number }) {
         {items.map((i) => (
           <Link key={i.href} href={i.href} className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${isOn(path, i.href) ? "bg-cyan/15 text-white" : "text-white/55"}`}>
             <i.icon className="size-4" /> {i.label}
-            {i.badge && pending > 0 && <span className="rounded-full bg-amber px-1.5 text-[10px] font-black text-ink">{pending}</span>}
+            {count(i.badge) > 0 && <span className="rounded-full bg-amber px-1.5 text-[10px] font-black text-ink">{count(i.badge)}</span>}
           </Link>
         ))}
       </nav>

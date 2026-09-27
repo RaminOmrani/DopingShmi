@@ -10,6 +10,7 @@ import { ExamTrend, DailyBars } from "@/components/charts/Charts";
 import { LevelBadge } from "@/components/panel/LevelBadge";
 import { ApproveButtons } from "../ApproveButtons";
 import { updateUser, givePoints, grantAccess, revokeAccess, smsUser } from "../actions";
+import { PrivateClassForm } from "@/components/admin/PrivateClassForm";
 import { CLASS_STATUS_LABEL, GRADES, MAJORS, gradeLabel } from "@/lib/constants";
 import { faNum, fmtDate, fmtDayShort, fmtDuration, fmtInt, fmtPct, fmtToman } from "@/lib/utils";
 
@@ -89,6 +90,13 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
           </section>
         </div>
       </div>
+
+      {u.classStatus === "APPROVED" && (
+        <section className="card mt-5 p-5">
+          <h2 className="mb-3 font-black">کلاس خصوصی این دانش‌آموز</h2>
+          <PrivateClassForm userId={u.id} hasParent={!!u.parentPhone} />
+        </section>
+      )}
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <section className="card p-5">

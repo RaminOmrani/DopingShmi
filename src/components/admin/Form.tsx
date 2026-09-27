@@ -9,15 +9,17 @@ type Action = (prev: ActionResult, fd: FormData) => Promise<ActionResult>;
 
 /** فرم با server action + اعلان نتیجه */
 export function Form({ action, children, className = "", reset = false, confirm: confirmText, onDone }: { action: Action; children: React.ReactNode; className?: string; reset?: boolean; confirm?: string; onDone?: (r: ActionResult) => void }) {
-  const [state, run] = useActionState(action, null);
+  // اعلان داخل خود action نمایش داده می‌شود تا اگر فرم بعد از ذخیره از صفحه حذف شد (مثل تأیید رسید)، پیام گم نشود
+  const [state, run] = useActionState(async (prev: ActionResult, fd: FormData) => {
+    const r = await action(prev, fd);
+    if (r?.error) toast.err(r.error);
+    else if (r?.ok) toast.ok(r.message || "ذخیره شد");
+    return r;
+  }, null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => {
     if (!state) return;
-    if (state.error) toast.err(state.error);
-    else if (state.ok) {
-      toast.ok(state.message || "ذخیره شد");
-      if (reset) ref.current?.reset();
-    }
+    if (state.ok && reset) ref.current?.reset();
     onDone?.(state);
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
   return (

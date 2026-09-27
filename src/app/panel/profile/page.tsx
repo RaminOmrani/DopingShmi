@@ -12,10 +12,11 @@ const REASON: Record<string, string> = { EXAM: "شرکت در آزمون", VIDEO
 
 export default async function Profile() {
   const user = await requireUser();
-  const [groups, purchases, logs] = await Promise.all([
+  const [groups, purchases, logs, reviews] = await Promise.all([
     db.classGroup.findMany({ where: { active: true }, orderBy: { order: "asc" } }),
     db.purchase.findMany({ where: { userId: user.id }, include: { topic: true, bundle: true }, orderBy: { createdAt: "desc" } }),
     db.pointLog.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 12 }),
+    db.payment.findMany({ where: { userId: user.id, status: "REVIEW" }, orderBy: { createdAt: "desc" } }),
   ]);
   const l = levelOf(user.points);
   return (
@@ -57,7 +58,13 @@ export default async function Profile() {
               <p className="text-xs text-white/50">{fmtToman(p.amount)} · {fmtDate(p.createdAt)}{p.expiresAt ? ` · تا ${fmtDate(p.expiresAt)}` : ""}</p>
             </div>
           ))}
-          {purchases.length === 0 && <p className="text-sm text-white/45">خریدی ندارید.</p>}
+          {reviews.map((p) => (
+            <div key={p.id} className="mb-2 rounded-xl border border-amber/30 bg-amber/10 px-3 py-2 text-sm">
+              <p className="font-bold">{p.description}</p>
+              <p className="text-xs text-amber">رسید در حال بررسی · {fmtToman(p.amount)}</p>
+            </div>
+          ))}
+          {purchases.length === 0 && reviews.length === 0 && <p className="text-sm text-white/45">خریدی ندارید.</p>}
         </section>
         <LogoutButton />
       </div>

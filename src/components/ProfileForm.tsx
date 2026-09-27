@@ -94,9 +94,9 @@ export function ProfileForm({ initial, groups, mode }: { initial: ProfileInit; g
                 <span className="text-xs leading-6 text-white/55">بعد از تأیید مدیر، به همه‌ی ویدیوها و آزمون‌های کلاس دسترسی رایگان خواهید داشت.</span>
               </span>
             </label>
-            {f.classStudent && groups.length > 0 && (
+            {f.classStudent && (
               <select className="input mt-3" value={f.classGroupId} onChange={(e) => set("classGroupId", e.target.value)}>
-                <option value="">کلاس / آموزشگاه خود را انتخاب کنید</option>
+                <option value="">کلاس خصوصی (تک‌نفره)</option>
                 {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             )}

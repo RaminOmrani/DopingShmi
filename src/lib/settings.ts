@@ -38,10 +38,20 @@ export interface ArvanSettings {
   watermark: boolean;
 }
 
+export interface BankCard {
+  number: string;
+  owner: string;
+  bank: string;
+}
+
 export interface PaymentSettings {
   enabled: boolean;
   merchantId: string;
   sandbox: boolean;
+  /** پرداخت کارت‌به‌کارت (تا فعال شدن درگاه) */
+  cardEnabled: boolean;
+  cards: BankCard[];
+  cardNote: string;
 }
 
 export interface PointSettings {
@@ -103,7 +113,14 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   sms: { provider: "mock", username: "", password: "", apiKey: "", from: "", usePatterns: true, parentSms: true },
   arvan: { apiKey: "", secureLink: true, bindIp: false, expireMinutes: 180, watermark: true },
-  payment: { enabled: false, merchantId: "", sandbox: true },
+  payment: {
+    enabled: false,
+    merchantId: "",
+    sandbox: true,
+    cardEnabled: true,
+    cards: [{ number: "6219861941279407", owner: "", bank: "سامان" }],
+    cardNote: "مبلغ را به کارت زیر واریز کنید و شماره پیگیری را وارد کنید. پس از تأیید (معمولاً کمتر از چند ساعت)، دسترسی شما فعال و پیامک تأیید ارسال می‌شود.",
+  },
   points: { examBase: 20, examBonusMax: 30, videoDone: 10, videoPer5Min: 1, onlinePer10Min: 1, onlineDailyCap: 12, daily: 3, streak7: 25 },
   access: { studentsAllGrades: true, requireApproval: true },
 };

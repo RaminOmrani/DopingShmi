@@ -22,7 +22,9 @@ export default async function Dashboard() {
   const user = await requireUser();
   const [s, events, notes, cont, exams] = await Promise.all([
     userStats(user),
-    user.classGroupId && user.classStatus === "APPROVED" ? db.classEvent.findMany({ where: { classGroupId: user.classGroupId }, orderBy: { createdAt: "desc" }, take: 4 }) : [],
+    user.classStatus === "APPROVED"
+      ? db.classEvent.findMany({ where: { OR: [{ userId: user.id }, ...(user.classGroupId ? [{ classGroupId: user.classGroupId }] : [])] }, orderBy: { createdAt: "desc" }, take: 4 })
+      : [],
     notificationsFor(user, 5),
     db.videoProgress.findMany({ where: { userId: user.id, completed: false }, orderBy: { updatedAt: "desc" }, take: 3, include: { video: { include: { topic: { select: { title: true } } } } } }),
     db.exam.findMany({ where: { ...examWhere(user), results: { none: { userId: user.id, status: "SUBMITTED" } } }, orderBy: { createdAt: "desc" }, take: 3 }),
@@ -151,7 +153,7 @@ export default async function Dashboard() {
               <div key={e.id} className="mb-2 flex items-center justify-between rounded-2xl bg-white/[.04] px-4 py-3 text-sm">
                 <div>
                   <p className="font-bold">{e.date}{e.time ? ` · ساعت ${e.time}` : ""}</p>
-                  <p className="text-xs text-white/50">{e.location || e.note || ""}</p>
+                  <p className="text-xs text-white/50">{e.userId ? "کلاس خصوصی · " : ""}{e.location || e.note || ""}</p>
                 </div>
                 <span className={`chip ${EVENT_LABEL[e.kind]?.c}`}>{EVENT_LABEL[e.kind]?.t}</span>
               </div>

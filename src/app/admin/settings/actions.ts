@@ -73,6 +73,22 @@ export const savePayment = adminAction(async (fd) => {
   return { ok: true };
 });
 
+/** کارت‌ها: فیلدهای card_N_number / card_N_owner / card_N_bank / card_N_remove */
+export const saveCards = adminAction(async (fd) => {
+  const cards: { number: string; owner: string; bank: string }[] = [];
+  for (let i = 0; i < 20; i++) {
+    if (!fd.has(`card_${i}_number`)) continue;
+    const number = str(fd, `card_${i}_number`).replace(/[۰-۹]/g, (d) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(d))).replace(/\D/g, "");
+    if (!number || bool(fd, `card_${i}_remove`)) continue;
+    must(number.length === 16, `شماره کارت ${number} باید ۱۶ رقم باشد`);
+    cards.push({ number, owner: str(fd, `card_${i}_owner`), bank: str(fd, `card_${i}_bank`) });
+  }
+  const cardEnabled = bool(fd, "cardEnabled");
+  must(!cardEnabled || cards.length, "حداقل یک شماره کارت وارد کنید");
+  await saveSetting("payment", { cardEnabled, cards, cardNote: str(fd, "cardNote") });
+  return { ok: true, message: "کارت‌ها ذخیره شد" };
+});
+
 export const savePoints = adminAction(async (fd) => {
   const keys = ["examBase", "examBonusMax", "videoDone", "videoPer5Min", "onlinePer10Min", "onlineDailyCap", "daily", "streak7"] as const;
   await saveSetting("points", Object.fromEntries(keys.map((k) => [k, Math.max(0, Math.round(num(fd, k)))])));

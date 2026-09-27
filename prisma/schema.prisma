@@ -53,6 +53,7 @@ model User {
   activities    Activity[]
   pointLogs     PointLog[]
   notifications Notification[]
+  classEvents   ClassEvent[]
 
   @@index([grade, major])
   @@index([classStatus])
@@ -73,9 +74,11 @@ model ClassGroup {
 }
 
 model ClassEvent {
-  id           String     @id @default(cuid())
-  classGroupId String
-  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  id           String      @id @default(cuid())
+  classGroupId String?
+  classGroup   ClassGroup? @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  userId       String? // کلاس خصوصی تک‌نفره
+  user         User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
   kind         String // FIXED | CANCELLED | RESCHEDULED
   date         String // تاریخ شمسی نمایشی
   time         String?
@@ -198,7 +201,10 @@ model Payment {
   userId      String
   user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount      Int
-  status      String    @default("PENDING") // PENDING | PAID | FAILED
+  status      String    @default("PENDING") // PENDING | REVIEW | PAID | FAILED
+  method      String    @default("ZARINPAL") // ZARINPAL | CARD
+  tracking    String? // کارت‌به‌کارت: شماره پیگیری / چهار رقم آخر کارت واریزکننده
+  receiptUrl  String?
   authority   String?   @unique
   refId       String?
   itemType    String // TOPIC | BUNDLE

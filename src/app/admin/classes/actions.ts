@@ -59,3 +59,34 @@ export const createEvent = adminAction(async (fd) => {
   revalidatePath("/admin/classes");
   return { ok: true, message: bool(fd, "sms") ? `ثبت شد و پیامک برای ${members.length} نفر در صف ارسال قرار گرفت` : "ثبت شد" };
 });
+
+/** کلاس خصوصی (تک‌نفره): اطلاع‌رسانی به یک دانش‌آموز */
+export const createPrivateEvent = adminAction(async (fd) => {
+  const userId = str(fd, "userId");
+  const kind = str(fd, "kind");
+  const date = str(fd, "date");
+  const time = str(fd, "time");
+  must(userId, "دانش‌آموز را انتخاب کنید");
+  must(KIND[kind], "نوع اطلاع‌رسانی نامعتبر است");
+  must(date, "تاریخ را وارد کنید");
+  const u = await db.user.findUniqueOrThrow({ where: { id: userId } });
+  const place = str(fd, "location") || "محل همیشگی";
+  const note = optStr(fd, "note");
+  const k = KIND[kind];
+  await db.classEvent.create({ data: { userId, kind, date, time: time || null, location: place, note, smsSent: bool(fd, "sms") ? 1 : 0 } });
+  await db.notification.create({
+    data: { userId, title: `کلاس خصوصی: ${k.status}`, body: `${date}${time ? ` ساعت ${time}` : ""}${kind !== "CANCELLED" ? ` · ${place}` : ""}${note ? `\n${note}` : ""}` },
+  });
+  if (bool(fd, "sms")) {
+    await sendBulk({
+      title: `کلاس خصوصی — ${u.name}`,
+      templateKey: k.tpl,
+      recipients: [{ id: u.id, phone: u.phone, name: u.name, parentPhone: u.parentPhone, parentSms: u.parentSms }],
+      vars: (r) => ({ name: r.name, class: "خصوصی", date, time: time || "-", place }),
+      parent: bool(fd, "parents") ? { templateKey: "parent_class", vars: (r) => ({ class: "خصوصی", name: r.name, status: k.status, date, time: time || "-" }) } : undefined,
+    });
+  }
+  revalidatePath("/admin/classes");
+  revalidatePath(`/admin/users/${userId}`);
+  return { ok: true, message: bool(fd, "sms") ? `ثبت شد و پیامک برای ${u.name} ارسال شد` : "ثبت شد" };
+});

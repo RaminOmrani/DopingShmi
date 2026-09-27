@@ -1,7 +1,7 @@
 import { getSettings } from "@/lib/settings";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
-import { saveSms, testSms, saveArvan, savePayment, savePoints, saveAccess, changePassword } from "./actions";
+import { saveSms, testSms, saveArvan, savePayment, saveCards, savePoints, saveAccess, changePassword } from "./actions";
 
 export const metadata = { title: "تنظیمات" };
 const mask = (s: string) => (s ? `••••${s.slice(-4)}` : "");
@@ -42,6 +42,24 @@ export default async function Settings() {
             <label className="flex items-center gap-2"><input type="checkbox" name="watermark" defaultChecked={s.arvan.watermark} className="size-4" /> واترمارک شماره موبایل کاربر روی ویدیو</label>
           </div>
           <Submit className="btn-primary sm:col-span-3">ذخیره و تست اتصال</Submit>
+        </Form>
+      </section>
+
+      <section className="card glow-border p-5">
+        <h2 className="mb-1 font-black">پرداخت کارت‌به‌کارت</h2>
+        <p className="mb-4 text-xs leading-6 text-white/50">تا وقتی درگاه فعال نیست، دانش‌آموز با زدن «خرید» شماره کارت (با دکمه‌ی کپی) و مبلغ را می‌بیند، واریز می‌کند و شماره پیگیری/عکس رسید را ثبت می‌کند. رسیدها در «پرداخت‌ها» برای تأیید شما می‌آیند و با تأیید، دسترسی خودکار فعال می‌شود. برای حذف یک کارت، تیک «حذف» را بزنید؛ برای افزودن، ردیف خالی آخر را پر کنید.</p>
+        <Form action={saveCards} className="grid gap-3">
+          {[...s.payment.cards, { number: "", owner: "", bank: "" }].map((c, i) => (
+            <div key={i} className="grid gap-2 rounded-2xl bg-white/[.03] p-3 sm:grid-cols-[1.4fr_1fr_.8fr_auto]">
+              <input name={`card_${i}_number`} defaultValue={c.number} className="input" dir="ltr" inputMode="numeric" placeholder={i === s.payment.cards.length ? "شماره کارت جدید (۱۶ رقم)" : "شماره کارت"} />
+              <input name={`card_${i}_owner`} defaultValue={c.owner} className="input" placeholder="نام صاحب کارت" />
+              <input name={`card_${i}_bank`} defaultValue={c.bank} className="input" placeholder="بانک" />
+              {i < s.payment.cards.length ? <label className="flex items-center gap-1.5 text-xs text-rose"><input type="checkbox" name={`card_${i}_remove`} className="size-4" /> حذف</label> : <span className="text-xs text-white/40 self-center">ردیف جدید</span>}
+            </div>
+          ))}
+          <Field label="توضیح برای دانش‌آموز"><textarea name="cardNote" defaultValue={s.payment.cardNote} rows={2} className="input text-sm" /></Field>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="cardEnabled" defaultChecked={s.payment.cardEnabled} className="size-4" /> کارت‌به‌کارت فعال باشد (وقتی درگاه فعال شود، خودکار از درگاه استفاده می‌شود)</label>
+          <Submit className="btn-primary">ذخیره کارت‌ها</Submit>
         </Form>
       </section>
 

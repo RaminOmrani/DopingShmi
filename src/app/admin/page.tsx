@@ -11,6 +11,7 @@ export default async function AdminHome() {
   const today = tehranDay();
   const from = addDays(today, -29);
   const monthStart = new Date(Date.now() - 30 * 86400000);
+  const payReview = await db.payment.count({ where: { status: "REVIEW" } });
   const [users, students, pending, todayAct, acts, revenue, payments, pendingList, videoToday] = await Promise.all([
     db.user.count({ where: { role: "USER" } }),
     db.user.count({ where: { classStatus: "APPROVED" } }),
@@ -30,6 +31,12 @@ export default async function AdminHome() {
   return (
     <div className="mx-auto max-w-7xl">
       <PageHead title="داشبورد مدیریت" desc={`امروز ${fmtDate(new Date())}`} />
+      {payReview > 0 && (
+        <Link href="/admin/payments" className="card glow-border mb-5 flex items-center justify-between p-4 text-sm">
+          <span>💳 <b>{faNum(payReview)}</b> رسید کارت‌به‌کارت منتظر تأیید شماست</span>
+          <ChevronLeft className="size-4 text-cyan" />
+        </Link>
+      )}
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Kpi label="کاربران" value={fmtInt(users)} icon={<Users className="size-4" />} />
         <Kpi label="شاگردان کلاس" value={fmtInt(students)} icon={<GraduationCap className="size-4" />} />

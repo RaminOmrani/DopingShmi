@@ -2,15 +2,22 @@ import "server-only";
 import { db } from "../db";
 import { getSetting } from "../settings";
 import { sendPattern, sendSimple, getCredit, type SendResult } from "./provider";
-import { SMS_TEMPLATES, renderTemplate } from "./templates";
+import { SMS_TEMPLATES, MELIPAYAMAK_BODY_IDS, renderTemplate } from "./templates";
 
 type Vars = Record<string, string | number | undefined>;
 
+let ensured = false;
 export async function ensureTemplates() {
-  const existing = await db.smsTemplate.findMany({ select: { key: true } });
-  const have = new Set(existing.map((e) => e.key));
+  if (ensured) return;
+  const existing = await db.smsTemplate.findMany({ select: { key: true, bodyId: true } });
+  const have = new Map(existing.map((e) => [e.key, e.bodyId]));
   const missing = SMS_TEMPLATES.filter((t) => !have.has(t.key));
-  if (missing.length) await db.smsTemplate.createMany({ data: missing.map((t) => ({ key: t.key, name: t.name, body: t.body })) });
+  if (missing.length) await db.smsTemplate.createMany({ data: missing.map((t) => ({ key: t.key, name: t.name, body: t.body, bodyId: MELIPAYAMAK_BODY_IDS[t.key] || null })) });
+  // کدهای الگوی ثبت‌شده در کد، برای الگوهایی که در پنل کد ندارند
+  for (const [key, bodyId] of Object.entries(MELIPAYAMAK_BODY_IDS)) {
+    if (bodyId && have.has(key) && !have.get(key)) await db.smsTemplate.update({ where: { key }, data: { bodyId } });
+  }
+  ensured = true;
 }
 
 async function cfg() {

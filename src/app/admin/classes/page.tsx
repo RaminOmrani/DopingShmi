@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { saveGroup, deleteGroup, createEvent } from "./actions";
+import { PrivateClassForm } from "@/components/admin/PrivateClassForm";
 import { GRADES, MAJORS, groupLabel } from "@/lib/constants";
 import { faNum, fmtDate } from "@/lib/utils";
 
@@ -11,10 +12,26 @@ export const metadata = { title: "کلاس‌ها" };
 const KIND_FA: Record<string, string> = { FIXED: "فیکس شد", CANCELLED: "لغو شد", RESCHEDULED: "جابه‌جا شد" };
 
 export default async function Classes() {
-  const groups = await db.classGroup.findMany({ orderBy: { order: "asc" }, include: { _count: { select: { users: { where: { classStatus: "APPROVED" } } } }, events: { orderBy: { createdAt: "desc" }, take: 3 } } });
+  const [groups, students, privateEvents] = await Promise.all([
+    db.classGroup.findMany({ orderBy: { order: "asc" }, include: { _count: { select: { users: { where: { classStatus: "APPROVED" } } } }, events: { orderBy: { createdAt: "desc" }, take: 3 } } }),
+    db.user.findMany({ where: { classStatus: "APPROVED", role: "USER" }, orderBy: [{ classGroupId: { sort: "asc", nulls: "first" } }, { name: "asc" }], select: { id: true, name: true, phone: true } }),
+    db.classEvent.findMany({ where: { userId: { not: null } }, orderBy: { createdAt: "desc" }, take: 8, include: { user: { select: { name: true } } } }),
+  ]);
   return (
     <div className="mx-auto max-w-7xl">
       <PageHead title="کلاس‌ها و اطلاع‌رسانی" desc="برای هر کلاس، فیکس شدن، لغو یا جابه‌جایی جلسه را ثبت کنید؛ به اعضای کلاس (و در صورت تمایل والدین) پیامک می‌رود و در اپلیکیشن هم نمایش داده می‌شود." />
+      <section className="card glow-border mb-6 p-5">
+        <h2 className="mb-1 text-lg font-black">کلاس خصوصی (تک‌نفره)</h2>
+        <p className="mb-4 text-xs text-white/50">برای شاگردانی که کلاس خصوصی دارند؛ پیامک و اطلاعیه فقط برای همان دانش‌آموز (و در صورت انتخاب، ولی‌اش) می‌رود. از صفحه‌ی هر دانش‌آموز هم در دسترس است.</p>
+        <PrivateClassForm students={students} />
+        {privateEvents.length > 0 && (
+          <div className="mt-3 space-y-1 text-xs text-white/60">
+            {privateEvents.map((e) => <p key={e.id}>• {e.user?.name}: {e.date} {e.time ?? ""} — {KIND_FA[e.kind]} <span className="text-white/35">{fmtDate(e.createdAt, true)}</span></p>)}
+          </div>
+        )}
+      </section>
+
+      <h2 className="mb-3 text-lg font-black">کلاس‌های گروهی</h2>
       <div className="grid gap-5 xl:grid-cols-2">
         {groups.map((g) => (
           <section key={g.id} className={`card p-5 ${g.active ? "" : "opacity-60"}`}>

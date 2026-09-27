@@ -6,10 +6,10 @@ export const metadata = { title: { default: "پنل مدیریت", template: "%s
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
-  const pending = await db.user.count({ where: { classStatus: "PENDING" } });
+  const [pending, payReview] = await Promise.all([db.user.count({ where: { classStatus: "PENDING" } }), db.payment.count({ where: { status: "REVIEW" } })]);
   return (
     <div className="min-h-dvh lg:flex">
-      <AdminNav pending={pending} />
+      <AdminNav pending={pending} payReview={payReview} />
       <main className="min-w-0 flex-1 px-4 pb-16 pt-5 md:px-7">{children}</main>
     </div>
   );
