@@ -10,11 +10,22 @@ DIR="/opt/doping"
 DATA="/var/lib/doping"
 
 log() { echo -e "\n\033[1;32m▶ $*\033[0m"; }
+die() { echo -e "\n\033[1;31m✖ $*\033[0m"; exit 1; }
+port_busy() { ss -ltnH "( sport = :$1 )" 2>/dev/null | grep -q .; }
+
+# ─── بررسی سرور مشترک (سایت‌های دیگر مثل ذهن سبز دست نمی‌خورند) ───
+log "بررسی سرور"
+if [ -e "$DIR" ] && [ ! -d "$DIR/.git" ]; then die "پوشه $DIR از قبل وجود دارد و مال این پروژه نیست؛ نصب متوقف شد"; fi
+if [ -d "$DIR/.git" ] && ! git -C "$DIR" remote get-url origin | grep -qi "DopingShmi"; then die "پوشه $DIR مال پروژه‌ی دیگری است؛ نصب متوقف شد"; fi
+if port_busy 80 && ! ss -ltnpH "( sport = :80 )" | grep -q nginx; then die "پورت ۸۰ دست برنامه‌ای غیر از nginx است (مثلاً apache)؛ اول بررسی شود"; fi
+if port_busy 5432 && ! systemctl list-unit-files 2>/dev/null | grep -q "^postgresql"; then die "پورت ۵۴۳۲ دست یک PostgreSQL دیگر (مثلاً داکر) است؛ اول بررسی شود"; fi
+echo "سرویس‌های فعلی pm2:"; (pm2 jlist 2>/dev/null | grep -o '"name":"[^"]*"' | sort -u) || echo "  (pm2 نصب نیست)"
+echo "سایت‌های فعلی nginx:"; ls /etc/nginx/sites-enabled 2>/dev/null || echo "  (nginx نصب نیست)"
 
 log "پیش‌نیازها"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
-apt-get install -y curl git nginx ufw ca-certificates postgresql postgresql-contrib openssl
+apt-get install -y curl git nginx ca-certificates postgresql postgresql-contrib openssl
 
 if ! command -v node >/dev/null 2>&1 || [ "$(node -v | cut -d. -f1 | tr -d v)" -lt 20 ]; then
   log "نصب Node.js 22"
@@ -56,6 +67,16 @@ ENV
 fi
 [ -z "$DOMAIN" ] && ! grep -q INSECURE_COOKIE .env && echo 'INSECURE_COOKIE="1"' >> .env
 
+# پورت اختصاصی: یک پورت آزاد از 3200 به بالا (3000/4310 مال ذهن سبز است) — یک‌بار انتخاب و در .env ثبت می‌شود
+if grep -q '^PORT=' .env; then
+  PORT="$(grep '^PORT=' .env | cut -d= -f2 | tr -d '"')"
+else
+  PORT=3200
+  while port_busy "$PORT"; do PORT=$((PORT + 1)); done
+  echo "PORT=\"$PORT\"" >> .env
+fi
+log "پورت داخلی این سایت: $PORT"
+
 # سرورهای کم‌حافظه: swap برای build
 if [ "$(free -m | awk '/Swap:/{print $2}')" -lt 1024 ] && [ ! -f /swapfile ]; then
   log "ایجاد ۲ گیگابایت swap"
@@ -76,21 +97,31 @@ pm2 delete doping >/dev/null 2>&1 || true
 pm2 start deploy/ecosystem.config.cjs
 pm2 save
 pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
+sleep 5
+curl -s -m 20 -o /dev/null "http://127.0.0.1:$PORT/" || die "سایت روی پورت $PORT بالا نیامد؛ pm2 logs doping را ببینید"
 
 log "nginx"
 SERVER_NAME="${DOMAIN:-_}"
 [ -n "$DOMAIN" ] && SERVER_NAME="$DOMAIN www.$DOMAIN"
-sed -e "s#__SERVER_NAME__#$SERVER_NAME#" -e "s#__UPLOADS__#$DATA/uploads#" deploy/nginx.conf.template > /etc/nginx/sites-available/doping
+# فقط فایل مخصوص همین سایت ساخته می‌شود؛ به سایت‌های دیگر دست نمی‌زنیم
+# certbot بلوک https را به همین فایل اضافه می‌کند؛ اگر قبلاً گواهی گرفته شده، فایل بازنویسی نمی‌شود
+if [ ! -f /etc/nginx/sites-available/doping ] || ! grep -q "managed by Certbot" /etc/nginx/sites-available/doping; then
+  sed -e "s#__SERVER_NAME__#$SERVER_NAME#" -e "s#__UPLOADS__#$DATA/uploads#" -e "s#__PORT__#$PORT#g" deploy/nginx.conf.template > /etc/nginx/sites-available/doping
+fi
 ln -sf /etc/nginx/sites-available/doping /etc/nginx/sites-enabled/doping
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
+if ! nginx -t; then
+  rm -f /etc/nginx/sites-enabled/doping
+  die "تنظیمات nginx خطا داشت؛ فایل این سایت غیرفعال شد و سایت‌های دیگر دست نخوردند"
+fi
+systemctl reload nginx
 
-ufw allow OpenSSH >/dev/null; ufw allow 'Nginx Full' >/dev/null; ufw --force enable >/dev/null
+# فایروال: فقط اگر از قبل فعال است، پورت وب را باز می‌کنیم (روشنش نمی‌کنیم تا سرویس‌های دیگر قطع نشوند)
+if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then ufw allow 'Nginx Full' >/dev/null || true; fi
 
 if [ -n "$DOMAIN" ]; then
   log "گواهی SSL"
   apt-get install -y certbot python3-certbot-nginx
-  certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect || echo "⚠️  SSL صادر نشد؛ مطمئن شوید رکورد A دامنه روی IP همین سرور است و دوباره: certbot --nginx -d $DOMAIN"
+  certbot --nginx --cert-name "$DOMAIN" -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --register-unsafely-without-email --redirect || echo "⚠️  SSL صادر نشد؛ مطمئن شوید رکورد A دامنه روی IP همین سرور است و دوباره: certbot --nginx -d $DOMAIN"
 fi
 
 log "پشتیبان‌گیری خودکار روزانه (ساعت ۴ صبح)"
