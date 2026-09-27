@@ -21,6 +21,6 @@ export async function fulfill(paymentId: string, refId: string | null) {
   }
   const done = await db.payment.update({ where: { id: p.id }, data: { status: "PAID", refId, paidAt: new Date() } });
   await db.notification.create({ data: { userId: p.userId, title: "خرید موفق 🎉", body: `«${title}» برای شما فعال شد.` } });
-  sendTemplate("purchase_ok", p.user.phone, { name: p.user.name, item: title, until: expiresAt ? ` تا ${fmtDate(expiresAt)}` : "" }, { userId: p.userId }).catch(() => {});
+  sendTemplate("purchase_ok", p.user.phone, { name: p.user.name, item: title, until: expiresAt ? `تا ${fmtDate(expiresAt)}` : "دائمی" }, { userId: p.userId }).catch(() => {});
   return done;
 }

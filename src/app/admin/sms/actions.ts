@@ -32,7 +32,7 @@ export const sendGeneral = adminAction(async (fd) => {
     templateKey: "general",
     recipients: users,
     vars: (r) => ({ message: personalize(r) }),
-    parent: bool(fd, "parents") ? { templateKey: "general", vars: (r) => ({ message: `ولی گرامی ${r.name}: ${personalize(r)}` }) } : undefined,
+    parent: bool(fd, "parents") ? { templateKey: "general", vars: (r) => ({ message: `(ولی ${r.name}) ${personalize(r)}` }) } : undefined,
   });
   revalidatePath("/admin/sms");
   return { ok: true, message: `ارسال برای ${users.length} نفر شروع شد` };
