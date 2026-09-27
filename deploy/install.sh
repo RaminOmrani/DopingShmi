@@ -13,6 +13,21 @@ log() { echo -e "\n\033[1;32m▶ $*\033[0m"; }
 die() { echo -e "\n\033[1;31m✖ $*\033[0m"; exit 1; }
 port_busy() { ss -ltnH "( sport = :$1 )" 2>/dev/null | grep -q .; }
 
+# swap موقت برای build (حدود ۱٫۸ گیگ رم لازم دارد) تا سیستم به‌خاطر کمبود رم سایت‌های دیگر را نبندد
+TMP_SWAP=/swapfile-doping-build
+add_temp_swap() {
+  local avail swapfree
+  avail=$(awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo)
+  swapfree=$(awk '/SwapFree/{print int($2/1024)}' /proc/meminfo)
+  if [ $((avail + swapfree)) -lt 3500 ] && [ ! -f "$TMP_SWAP" ]; then
+    echo "▶ ساخت swap موقت ۳ گیگابایتی برای build (رم آزاد: ${avail}MB، swap آزاد: ${swapfree}MB)"
+    fallocate -l 3G "$TMP_SWAP" 2>/dev/null || dd if=/dev/zero of="$TMP_SWAP" bs=1M count=3072 status=none
+    chmod 600 "$TMP_SWAP" && mkswap "$TMP_SWAP" >/dev/null && swapon "$TMP_SWAP"
+  fi
+}
+remove_temp_swap() { if [ -f "$TMP_SWAP" ]; then swapoff "$TMP_SWAP" 2>/dev/null || true; rm -f "$TMP_SWAP"; fi; }
+trap remove_temp_swap EXIT
+
 # ─── بررسی سرور مشترک (سایت‌های دیگر مثل ذهن سبز دست نمی‌خورند) ───
 log "بررسی سرور"
 if [ -e "$DIR" ] && [ ! -d "$DIR/.git" ]; then die "پوشه $DIR از قبل وجود دارد و مال این پروژه نیست؛ نصب متوقف شد"; fi
@@ -90,7 +105,9 @@ log "نصب وابستگی‌ها، دیتابیس و ساخت"
 pnpm install --frozen-lockfile
 pnpm db:push
 pnpm db:seed
-pnpm build
+add_temp_swap
+nice -n 19 pnpm build
+remove_temp_swap
 
 log "راه‌اندازی سرویس با pm2"
 pm2 delete doping >/dev/null 2>&1 || true
