@@ -1,0 +1,359 @@
+// دوپینگ شیمی — مدل داده
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  USER
+}
+
+enum ClassStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String      @id @default(cuid())
+  phone        String      @unique
+  name         String      @default("")
+  role         Role        @default(USER)
+  passwordHash String?
+  grade        String? // G10 | G11 | G12 | GRAD
+  major        String? // TAJROBI | RIAZI
+  province     String?
+  city         String?
+  address      String?
+  school       String?
+  parentPhone  String?
+  parentSms    Boolean     @default(false)
+  classStatus  ClassStatus @default(NONE)
+  classGroupId String?
+  classGroup   ClassGroup? @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
+  classNote    String?
+  points       Int         @default(0)
+  blocked      Boolean     @default(false)
+  profileDone  Boolean     @default(false)
+  lastSeenAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  purchases     Purchase[]
+  payments      Payment[]
+  progress      VideoProgress[]
+  results       ExamResult[]
+  activities    Activity[]
+  pointLogs     PointLog[]
+  notifications Notification[]
+
+  @@index([grade, major])
+  @@index([classStatus])
+}
+
+model ClassGroup {
+  id        String       @id @default(cuid())
+  name      String
+  grade     String?
+  major     String?
+  location  String?
+  schedule  String?
+  active    Boolean      @default(true)
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+  users     User[]
+  events    ClassEvent[]
+}
+
+model ClassEvent {
+  id           String     @id @default(cuid())
+  classGroupId String
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  kind         String // FIXED | CANCELLED | RESCHEDULED
+  date         String // تاریخ شمسی نمایشی
+  time         String?
+  location     String?
+  note         String?
+  smsSent      Int        @default(0)
+  createdAt    DateTime   @default(now())
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  url       String
+  thumbUrl  String?
+  width     Int?
+  height    Int?
+  title     String?
+  caption   String?
+  eventName String?
+  section   String   @default("CONFERENCE") // CONFERENCE | TEACHER | GALLERY
+  order     Int      @default(0)
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([section, order])
+}
+
+model TopRank {
+  id        String   @id @default(cuid())
+  name      String
+  rank      Int
+  year      String
+  field     String?
+  photo     String?
+  note      String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Topic {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  grade       String // G10 | G11 | G12 | ALL
+  majors      String[]   @default(["TAJROBI", "RIAZI"])
+  order       Int        @default(0)
+  price       Int        @default(0) // تومان
+  cover       String?
+  published   Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  videos      Video[]
+  bundles     Bundle[]
+  purchases   Purchase[]
+}
+
+model Video {
+  id           String          @id @default(cuid())
+  topicId      String
+  topic        Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  title        String
+  description  String?
+  arvanVideoId String?
+  durationSec  Int             @default(0)
+  thumbnail    String?
+  isFree       Boolean         @default(false)
+  order        Int             @default(0)
+  published    Boolean         @default(true)
+  createdAt    DateTime        @default(now())
+  progress     VideoProgress[]
+}
+
+model Bundle {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  price       Int
+  durationDays Int?
+  active      Boolean    @default(true)
+  order       Int        @default(0)
+  topics      Topic[]
+  purchases   Purchase[]
+  createdAt   DateTime   @default(now())
+}
+
+model Purchase {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId   String?
+  topic     Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  bundleId  String?
+  bundle    Bundle?   @relation(fields: [bundleId], references: [id], onDelete: SetNull)
+  amount    Int
+  expiresAt DateTime?
+  paymentId String?
+  remindedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Payment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int
+  status      String    @default("PENDING") // PENDING | PAID | FAILED
+  authority   String?   @unique
+  refId       String?
+  itemType    String // TOPIC | BUNDLE
+  itemId      String
+  description String?
+  error       String?
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+}
+
+model VideoProgress {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId        String
+  video          Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  watchedSeconds Int      @default(0)
+  lastPosition   Int      @default(0)
+  completed      Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, videoId])
+}
+
+model Exam {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  kind        String       @default("INTERNAL") // INTERNAL | EXTERNAL
+  externalUrl String?
+  openMode    String       @default("TAB") // TAB | IFRAME
+  grade       String? // null = همه
+  major       String?
+  audience    String       @default("STUDENTS") // STUDENTS | ALL | GROUP
+  classGroupId String?
+  durationMin Int          @default(30)
+  startAt     DateTime?
+  endAt       DateTime?
+  negative    Boolean      @default(true)
+  showAnswers Boolean      @default(true)
+  maxScore    Float        @default(100)
+  published   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  questions   Question[]
+  results     ExamResult[]
+}
+
+model Question {
+  id          String  @id @default(cuid())
+  examId      String
+  exam        Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+  order       Int     @default(0)
+  text        String
+  image       String?
+  options     Json // string[4]
+  correct     Int // 0..3
+  explanation String?
+}
+
+model ExamResult {
+  id          String    @id @default(cuid())
+  examId      String
+  exam        Exam      @relation(fields: [examId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      String    @default("IN_PROGRESS") // LAUNCHED | IN_PROGRESS | SUBMITTED
+  source      String    @default("INTERNAL") // INTERNAL | IMPORT | MANUAL
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  answers     Json?
+  correct     Int       @default(0)
+  wrong       Int       @default(0)
+  blank       Int       @default(0)
+  percent     Float? // درصد (با نمره منفی)
+  score       Float? // نمره خام (آزمون‌های بیرونی)
+  taraz       Int?
+  rank        Int?
+
+  @@unique([examId, userId])
+  @@index([userId])
+}
+
+model Activity {
+  id       String @id @default(cuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day      String // YYYY-MM-DD (به وقت تهران)
+  onlineSec Int   @default(0)
+  videoSec Int    @default(0)
+  exams    Int    @default(0)
+  points   Int    @default(0)
+
+  @@unique([userId, day])
+  @@index([day])
+}
+
+model PointLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String // EXAM | EXAM_BONUS | VIDEO_DONE | VIDEO_TIME | ONLINE | DAILY | STREAK | ADMIN
+  refId     String   @default("")
+  createdAt DateTime @default(now())
+
+  @@unique([userId, reason, refId])
+  @@index([userId, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  audience  Json? // فیلتر پیام‌های عمومی
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model SmsTemplate {
+  key       String   @id
+  name      String
+  body      String
+  bodyId    String?
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+model SmsLog {
+  id          String   @id @default(cuid())
+  to          String
+  userId      String?
+  templateKey String?
+  text        String
+  status      String // SENT | FAILED | MOCK
+  error       String?
+  providerId  String?
+  campaignId  String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model SmsCampaign {
+  id          String   @id @default(cuid())
+  title       String
+  templateKey String?
+  text        String
+  filter      Json?
+  total       Int      @default(0)
+  sent        Int      @default(0)
+  failed      Int      @default(0)
+  status      String   @default("RUNNING")
+  createdAt   DateTime @default(now())
+}
