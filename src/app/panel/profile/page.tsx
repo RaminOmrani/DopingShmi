@@ -4,6 +4,7 @@ import { ProfileForm } from "@/components/ProfileForm";
 import { LevelBadge } from "@/components/panel/LevelBadge";
 import { LogoutButton } from "@/components/panel/LogoutButton";
 import { PasswordForm } from "@/components/panel/PasswordForm";
+import { ThemeToggle } from "@/components/Theme";
 import { faNum, fmtDate, fmtInt, fmtToman } from "@/lib/utils";
 import { levelOf } from "@/lib/constants";
 
@@ -67,6 +68,7 @@ export default async function Profile() {
           ))}
           {purchases.length === 0 && reviews.length === 0 && <p className="text-sm text-white/45">خریدی ندارید.</p>}
         </section>
+        <ThemeToggle withLabel className="btn-ghost w-full" />
         <section className="card p-5"><PasswordForm hasPassword={!!user.passwordHash} /></section>
         <LogoutButton />
       </div>

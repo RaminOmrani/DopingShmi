@@ -199,7 +199,7 @@ function Heat({ days }: { days: { day: string; points: number; onlineMin: number
           return (
             <span key={d.day} title={`${fmtDayShort(d.day)}: ${faNum(d.onlineMin)} دقیقه · ${faNum(d.points)} امتیاز`}
               className="size-5 rounded-md border border-white/5 md:size-6"
-              style={{ background: d.onlineMin ? `rgba(8,145,178,${0.2 + v * 0.8})` : "rgba(255,255,255,.04)" }} />
+              style={{ background: d.onlineMin ? `rgba(8,145,178,${0.2 + v * 0.8})` : "var(--heat-empty)" }} />
           );
         })}
       </div>

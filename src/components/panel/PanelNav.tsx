@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, PlayCircle, FileCheck2, Trophy, UserRound, LogOut, Home, ShieldCheck } from "lucide-react";
+import { ThemeToggle } from "@/components/Theme";
 
 const items = [
   { href: "/panel", label: "داشبورد", icon: LayoutDashboard },
@@ -33,6 +34,7 @@ export function SideNav({ admin }: { admin: boolean }) {
         ))}
       </nav>
       <div className="mt-auto grid gap-1">
+        <ThemeToggle withLabel className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-white/55 hover:bg-white/5" />
         {admin && <Link href="/admin" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-amber hover:bg-white/5"><ShieldCheck className="size-5" /> پنل مدیریت</Link>}
         <Link href="/" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-white/55 hover:bg-white/5"><Home className="size-5" /> صفحه اصلی سایت</Link>
         <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; }} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-rose/80 hover:bg-white/5">

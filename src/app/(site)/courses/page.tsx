@@ -47,7 +47,7 @@ export default async function Courses() {
               const min = Math.round(t.videos.reduce((s, v) => s + v.durationSec, 0) / 60);
               return (
                 <Link key={t.id} href={`/courses/${t.id}`} className="card group overflow-hidden transition hover:-translate-y-1 hover:border-cyan/30">
-                  <div className="relative h-40 overflow-hidden bg-gradient-to-br from-violet/30 via-deep to-cyan/15">
+                  <div className="on-dark relative h-40 overflow-hidden bg-gradient-to-br from-violet/40 via-[#0b1026] to-cyan/20">
                     {t.cover && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={t.cover} alt="" className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />

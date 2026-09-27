@@ -146,3 +146,65 @@ select.input option { background: #0b1026; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
 }
+
+/* ═════════════ حالت روشن ═════════════
+   رنگ‌های پایه جابه‌جا می‌شوند: «سفید» (متن و لایه‌های شفاف) تیره می‌شود و پس‌زمینه‌ها روشن؛
+   رنگ‌های تأکیدی پررنگ‌تر می‌شوند تا روی زمینه‌ی روشن خوانا باشند. */
+:root { --chart-axis: rgba(255,255,255,.4); --chart-grid: rgba(255,255,255,.06); --heat-empty: rgba(255,255,255,.04); }
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-white: #0f172a;
+  --color-ink: #f5f7fc;
+  --color-night: #eef1f9;
+  --color-deep: #e4e9f6;
+  --color-cyan: #0e7490;
+  --color-teal: #0f766e;
+  --color-violet: #7c3aed;
+  --color-magenta: #a21caf;
+  --color-lime: #3f7d0b;
+  --color-amber: #b45309;
+  --color-rose: #e11d48;
+  --chart-axis: rgba(15,23,42,.55);
+  --chart-grid: rgba(15,23,42,.08);
+  --heat-empty: rgba(15,23,42,.06);
+}
+:root[data-theme="light"] body { color: #1e293b; }
+:root[data-theme="light"] .aurora {
+  background:
+    radial-gradient(40% 35% at 15% 10%, rgba(34, 211, 238, 0.18), transparent 70%),
+    radial-gradient(35% 30% at 85% 15%, rgba(139, 92, 246, 0.16), transparent 70%),
+    radial-gradient(45% 40% at 60% 95%, rgba(232, 121, 249, 0.10), transparent 70%),
+    #f5f7fc;
+}
+:root[data-theme="light"] .grain { opacity: .025; }
+:root[data-theme="light"] .grid-bg {
+  background-image: linear-gradient(rgba(15,23,42,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(15,23,42,.05) 1px, transparent 1px);
+}
+:root[data-theme="light"] .glass {
+  background: rgba(255,255,255,.78);
+  border-color: rgba(15,23,42,.08);
+  box-shadow: 0 10px 30px -18px rgba(15,23,42,.25);
+}
+:root[data-theme="light"] .card {
+  background: rgba(255,255,255,.88);
+  border-color: rgba(15,23,42,.08);
+  box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 18px 40px -28px rgba(30,41,90,.35);
+}
+:root[data-theme="light"] .text-gradient,
+:root[data-theme="light"] .text-shine {
+  background-image: linear-gradient(100deg, #0e7490 0%, #7c3aed 45%, #c026d3 75%, #0e7490 100%);
+}
+:root[data-theme="light"] select.input option { background: #fff; }
+:root[data-theme="light"] ::selection { background: rgba(124,58,237,.25); color: #0f172a; }
+
+/* بخش‌هایی که همیشه تیره‌اند (روی عکس، پلیر ویدیو، لایت‌باکس): رنگ‌های حالت تیره را نگه می‌دارند */
+:root[data-theme="light"] .on-dark {
+  --color-white: #ffffff;
+  --color-cyan: #22d3ee;
+  --color-lime: #a3e635;
+  --color-amber: #fbbf24;
+  --color-rose: #fb7185;
+  color: #fff;
+}
+:root[data-theme="light"] .on-dark .glass,
+:root[data-theme="light"] .on-dark.glass { background: rgba(0,0,0,.45); border-color: rgba(255,255,255,.15); }

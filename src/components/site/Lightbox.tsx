@@ -24,7 +24,7 @@ export function Lightbox({ photos, index, onChange }: { photos: LbPhoto[]; index
   return (
     <AnimatePresence>
       {p && (
-        <motion.div className="fixed inset-0 z-[80] grid place-items-center bg-black/90 p-4 backdrop-blur-xl" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => onChange(null)}>
+        <motion.div className="on-dark fixed inset-0 z-[80] grid place-items-center bg-black/90 p-4 backdrop-blur-xl" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => onChange(null)}>
           <button className="btn-ghost btn-sm absolute left-4 top-4 !rounded-full" onClick={() => onChange(null)} aria-label="بستن"><X className="size-5" /></button>
           <button className="btn-ghost absolute right-3 top-1/2 !rounded-full !p-3" onClick={(e) => { e.stopPropagation(); onChange((index! - 1 + photos.length) % photos.length); }} aria-label="قبلی"><ChevronRight /></button>
           <button className="btn-ghost absolute left-3 top-1/2 !rounded-full !p-3" onClick={(e) => { e.stopPropagation(); onChange((index! + 1) % photos.length); }} aria-label="بعدی"><ChevronLeft /></button>

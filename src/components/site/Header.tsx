@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Menu, X, LayoutDashboard, LogIn } from "lucide-react";
+import { ThemeToggle } from "@/components/Theme";
 
 const links = [
   { href: "/#about", label: "درباره استاد" },
@@ -42,6 +43,7 @@ export function Header({ user }: { user: { name: string; admin: boolean } | null
           ))}
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {user ? (
             <Link href={panelHref} className="btn-primary btn-sm !px-4">
               <LayoutDashboard className="size-4" /> {user.admin ? "پنل مدیریت" : "پنل من"}

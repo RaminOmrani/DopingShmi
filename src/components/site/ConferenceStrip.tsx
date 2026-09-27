@@ -15,7 +15,7 @@ export function ConferenceStrip({ photos }: { photos: (LbPhoto & { thumbUrl?: st
     return (
       <div className="fade-x flex gap-4 overflow-hidden">
         {placeholders.map((t, i) => (
-          <div key={t} className="card relative grid h-56 w-80 shrink-0 place-items-end overflow-hidden p-5" style={{ background: `linear-gradient(${120 + i * 30}deg, rgba(34,211,238,.18), rgba(139,92,246,.22), rgba(3,4,11,.9))` }}>
+          <div key={t} className="on-dark card relative grid h-56 w-80 shrink-0 place-items-end overflow-hidden p-5" style={{ background: `linear-gradient(${120 + i * 30}deg, rgba(34,211,238,.18), rgba(139,92,246,.22), rgba(3,4,11,.9))` }}>
             <span className="text-sm font-bold text-white/80">{t}</span>
           </div>
         ))}
@@ -37,7 +37,7 @@ export function ConferenceStrip({ photos }: { photos: (LbPhoto & { thumbUrl?: st
                 <button
                   key={`${p.id}-${i}`}
                   onClick={() => setOpen(photos.indexOf(p))}
-                  className="relative h-52 w-72 shrink-0 overflow-hidden rounded-3xl border border-white/10 md:h-64 md:w-96"
+                  className="on-dark relative h-52 w-72 shrink-0 overflow-hidden rounded-3xl border border-white/10 md:h-64 md:w-96"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={p.thumbUrl || p.url} alt={p.title ?? "همایش"} loading="lazy" className="h-full w-full object-cover transition duration-700 hover:scale-110" />

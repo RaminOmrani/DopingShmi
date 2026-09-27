@@ -119,7 +119,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
 
   if (err)
     return (
-      <div className="grid aspect-video place-items-center rounded-3xl border border-white/10 bg-black/60 p-6 text-center">
+      <div className="on-dark grid aspect-video place-items-center rounded-3xl border border-white/10 bg-black/60 p-6 text-center">
         <div>
           {err.includes("تهیه") ? <Lock className="mx-auto mb-3 size-10 text-amber" /> : <AlertTriangle className="mx-auto mb-3 size-10 text-rose" />}
           <p className="text-sm text-white/75">{err}</p>
@@ -128,20 +128,20 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
     );
   if (!data)
     return (
-      <div className="grid aspect-video place-items-center rounded-3xl border border-white/10 bg-black/60">
+      <div className="on-dark grid aspect-video place-items-center rounded-3xl border border-white/10 bg-black/60">
         <Loader2 className="size-10 animate-spin text-cyan" />
       </div>
     );
 
   if (data.playerUrl)
     return (
-      <div className="relative aspect-video overflow-hidden rounded-3xl border border-white/10 bg-black">
+      <div className="on-dark relative aspect-video overflow-hidden rounded-3xl border border-white/10 bg-black">
         <iframe src={data.playerUrl} className="size-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
       </div>
     );
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-black shadow-[0_30px_80px_-30px_rgba(139,92,246,.6)]" onContextMenu={(e) => e.preventDefault()}>
+    <div className="on-dark relative overflow-hidden rounded-3xl border border-white/10 bg-black shadow-[0_30px_80px_-30px_rgba(139,92,246,.6)]" onContextMenu={(e) => e.preventDefault()}>
       <video ref={ref} poster={data.poster ?? undefined} controls playsInline controlsList="nodownload noremoteplayback" disablePictureInPicture={false} className="aspect-video w-full bg-black" />
       {data.watermark && (
         <span className="pointer-events-none absolute select-none text-xs font-bold text-white/25 transition-all duration-[2000ms]" style={{ left: `${wm.x}%`, top: `${wm.y}%` }} dir="ltr">

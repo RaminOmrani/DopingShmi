@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { MoleculeCanvas } from "@/components/site/MoleculeCanvas";
+import { ThemeToggle } from "@/components/Theme";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="relative grid min-h-dvh place-items-center px-4 py-10">
       <div className="fixed inset-0 -z-10 opacity-70"><MoleculeCanvas density={0.6} /></div>
+      <div className="fixed left-4 top-4"><ThemeToggle /></div>
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex flex-col items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}

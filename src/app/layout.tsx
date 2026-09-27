@@ -3,6 +3,7 @@ import "@fontsource-variable/vazirmatn";
 import "./globals.css";
 import { PwaRegister } from "@/components/PwaRegister";
 import { Toaster } from "@/components/ui/Toast";
+import { themeInitScript } from "@/components/Theme";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || "https://dopingshimi.ir"),
@@ -30,6 +31,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="antialiased">
         <div className="aurora" aria-hidden />
         <div className="grain" aria-hidden />

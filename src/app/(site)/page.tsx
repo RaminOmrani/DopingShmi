@@ -190,7 +190,7 @@ export default async function Home() {
                       ) : (
                         <Atom className="absolute inset-0 m-auto size-12 text-white/20" />
                       )}
-                      <span className="absolute bottom-2 right-2 rounded-lg bg-black/70 px-2 py-0.5 text-xs font-black text-amber">رتبه {faNum(r.rank)}</span>
+                      <span className="on-dark absolute bottom-2 right-2 rounded-lg bg-black/70 px-2 py-0.5 text-xs font-black text-amber">رتبه {faNum(r.rank)}</span>
                     </div>
                     <div className="p-3">
                       <p className="line-clamp-1 text-sm font-bold">{r.name}</p>

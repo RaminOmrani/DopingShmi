@@ -36,7 +36,7 @@ export default async function Videos({ searchParams }: { searchParams: Promise<{
           const pct = t.videos.length ? Math.round((c / t.videos.length) * 100) : 0;
           return (
             <Link key={t.id} href={`/panel/videos/topic/${t.id}`} className="card group overflow-hidden transition hover:-translate-y-1 hover:border-cyan/30">
-              <div className="relative h-32 overflow-hidden bg-gradient-to-br from-violet/30 via-deep to-cyan/15">
+              <div className="on-dark relative h-32 overflow-hidden bg-gradient-to-br from-violet/40 via-[#0b1026] to-cyan/20">
                 {t.cover && (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={t.cover} alt="" className="h-full w-full object-cover opacity-80 transition duration-700 group-hover:scale-105" />

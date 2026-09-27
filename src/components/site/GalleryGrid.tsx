@@ -18,7 +18,7 @@ export function GalleryGrid({ photos }: { photos: (LbPhoto & { thumbUrl?: string
       )}
       <div className="columns-2 gap-3 md:columns-3 lg:columns-4">
         {list.map((p, i) => (
-          <button key={p.id} onClick={() => setOpen(i)} className="group relative mb-3 block w-full overflow-hidden rounded-2xl border border-white/10">
+          <button key={p.id} onClick={() => setOpen(i)} className="on-dark group relative mb-3 block w-full overflow-hidden rounded-2xl border border-white/10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={p.thumbUrl || p.url} alt={p.title ?? ""} loading="lazy" className="w-full transition duration-700 group-hover:scale-105" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 transition group-hover:opacity-100" />

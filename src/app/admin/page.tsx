@@ -52,7 +52,7 @@ export default async function AdminHome() {
         </section>
         <section className="card p-5">
           <h2 className="mb-3 font-black">دقیقه‌های تماشای ویدیو در هر روز</h2>
-          <DailyBars data={daily} dataKey="video" name="تماشا" unit=" دقیقه" color="#a855f7" />
+          <DailyBars data={daily} dataKey="video" name="تماشا" unit=" دقیقه" color="group" />
         </section>
       </div>
       <div className="grid gap-5 lg:grid-cols-2">

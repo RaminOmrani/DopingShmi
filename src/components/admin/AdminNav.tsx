@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, CalendarClock, BarChart3, PlayCircle, Package, FileCheck2, Images, Medal, FileText, MessageSquareText, CreditCard, Settings, Home, LogOut,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/Theme";
 
 const items = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
@@ -44,11 +45,13 @@ export function AdminNav({ pending, payReview = 0 }: { pending: number; payRevie
           ))}
         </nav>
         <div className="mt-auto grid gap-0.5 pt-4">
+          <ThemeToggle withLabel className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-white/55 hover:bg-white/5" />
           <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-white/55 hover:bg-white/5"><Home className="size-[18px]" /> مشاهده سایت</Link>
           <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; }} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-rose/80 hover:bg-white/5"><LogOut className="size-[18px]" /> خروج</button>
         </div>
       </aside>
       <nav className="glass no-scrollbar sticky top-0 z-40 flex gap-1 overflow-x-auto px-2 py-2 lg:hidden">
+        <ThemeToggle className="flex shrink-0 items-center rounded-xl px-3 py-2 text-white/55" />
         {items.map((i) => (
           <Link key={i.href} href={i.href} className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold ${isOn(path, i.href) ? "bg-cyan/15 text-white" : "text-white/55"}`}>
             <i.icon className="size-4" /> {i.label}
