@@ -274,7 +274,7 @@ export default async function Home() {
                 با شماره موبایلت ثبت‌نام کن. اگه شاگرد کلاس‌های استاد هستی، بعد از تأیید به همه‌ی ویدیوها و آزمون‌ها دسترسی داری؛ وگرنه می‌تونی هر مبحث رو جدا تهیه کنی.
               </p>
               <div className="mb-10 flex flex-wrap justify-center gap-3">
-                <Link href="/login" className="btn-primary !px-8 !py-4 text-base">ثبت‌نام رایگان</Link>
+                <Link href="/login?mode=signup" className="btn-primary !px-8 !py-4 text-base">ثبت‌نام رایگان</Link>
                 {site.phone && <a href={`tel:${site.phone}`} className="btn-ghost !px-8 !py-4 text-base"><Phone className="size-5 text-emerald-300" /> <span dir="ltr">{faNum(site.phone)}</span></a>}
               </div>
               <div className="flex flex-col items-center gap-3">

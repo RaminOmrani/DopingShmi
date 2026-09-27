@@ -59,9 +59,9 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
             {me?.role === "ADMIN" && (
               <>
                 <Field label="نقش"><select name="role" defaultValue={u.role} className="input"><option value="USER">دانش‌آموز</option><option value="STAFF">پشتیبان (دسترسی پنل)</option><option value="ADMIN">مدیر کامل</option></select></Field>
-                <Field label="رمز ورود پنل (برای مدیر/پشتیبان)"><input name="password" type="password" className="input" placeholder="خالی = بدون تغییر" dir="ltr" /></Field>
               </>
             )}
+            <Field label="تعیین رمز جدید برای این کاربر"><input name="password" type="password" className="input" placeholder="خالی = بدون تغییر" dir="ltr" autoComplete="new-password" /></Field>
             <label className="flex items-center gap-2 self-end pb-3 text-sm text-rose"><input type="checkbox" name="blocked" defaultChecked={u.blocked} className="size-4 accent-rose-500" /> مسدود</label>
             <div className="text-xs leading-6 text-white/50 sm:col-span-3">
               مدرسه: {u.school ?? "—"} · استان: {u.province ?? "—"} · آدرس: {u.address ?? "—"} · ولی: {u.parentPhone ? `${faNum(u.parentPhone)} ${u.parentSms ? "(پیامک فعال)" : ""}` : "—"}
