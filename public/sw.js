@@ -1,5 +1,5 @@
 /* Service Worker دوپینگ شیمی — کش فایل‌های ثابت + صفحه آفلاین */
-const VERSION = "ds-v1";
+const VERSION = "ds-v2";
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 const OFFLINE = "/offline";
