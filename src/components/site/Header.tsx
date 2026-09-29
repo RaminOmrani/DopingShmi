@@ -6,11 +6,11 @@ import { Menu, X, LayoutDashboard, LogIn } from "lucide-react";
 import { ThemeToggle } from "@/components/Theme";
 
 const links = [
-  { href: "/#about", label: "درباره استاد" },
-  { href: "/#conferences", label: "همایش‌ها" },
-  { href: "/#ranks", label: "رتبه‌ها" },
+  { href: "/javad-partovi", label: "درباره استاد" },
+  { href: "/tadris-shimi", label: "تدریس شیمی" },
   { href: "/courses", label: "ویدیوها" },
-  { href: "/gallery", label: "گالری" },
+  { href: "/articles", label: "مقالات" },
+  { href: "/gallery", label: "همایش‌ها" },
   { href: "/#contact", label: "تماس" },
 ];
 

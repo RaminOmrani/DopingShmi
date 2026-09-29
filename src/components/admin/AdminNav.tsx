@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Users, CalendarClock, BarChart3, PlayCircle, Package, FileCheck2, Images, Medal, FileText, MessageSquareText, CreditCard, Settings, Home, LogOut,
+  LayoutDashboard, Users, CalendarClock, BarChart3, PlayCircle, Package, FileCheck2, Images, Medal, FileText, MessageSquareText, Newspaper, CreditCard, Settings, Home, LogOut,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/Theme";
 
@@ -16,7 +16,8 @@ const items = [
   { href: "/admin/exams", label: "آزمون‌ها", icon: FileCheck2 },
   { href: "/admin/photos", label: "عکس‌ها و همایش‌ها", icon: Images },
   { href: "/admin/ranks", label: "رتبه‌های برتر", icon: Medal },
-  { href: "/admin/content", label: "متن‌های سایت", icon: FileText },
+  { href: "/admin/content", label: "متن‌های سایت و سئو", icon: FileText },
+  { href: "/admin/articles", label: "مقالات", icon: Newspaper },
   { href: "/admin/sms", label: "پیامک", icon: MessageSquareText },
   { href: "/admin/payments", label: "پرداخت‌ها", icon: CreditCard, badge: "pay" },
   { href: "/admin/settings", label: "تنظیمات", icon: Settings },

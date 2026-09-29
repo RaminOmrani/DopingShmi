@@ -39,6 +39,18 @@ export default async function Content() {
           <Field label="لینک نقشه (نشان / گوگل)"><input name="mapUrl" defaultValue={s.mapUrl} className="input" dir="ltr" /></Field>
           <Field label="متن کپی‌رایت"><input name="footerText" defaultValue={s.footerText} className="input" /></Field>
         </section>
+        <section className="card grid gap-3 p-5 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <h2 className="font-black">سئو (نمایش در گوگل)</h2>
+            <p className="mt-1 text-xs leading-6 text-white/50">عنوان و توضیحی که گوگل زیر لینک سایت نشان می‌دهد. «دوپینگ شیمی»، «تدریس شیمی» و «جواد پرتویی» را در آن‌ها نگه دارید.</p>
+          </div>
+          <Field label="عنوان صفحه‌ی اصلی (حدود ۶۰ حرف)" className="sm:col-span-2"><input name="seoTitle" defaultValue={s.seoTitle} className="input" maxLength={90} /></Field>
+          <Field label="توضیح گوگل (حدود ۱۵۰ حرف)" className="sm:col-span-2"><textarea name="seoDescription" defaultValue={s.seoDescription} rows={3} maxLength={300} className="input" /></Field>
+          <Field label="شهر"><input name="city" defaultValue={s.city} className="input" /></Field>
+          <div />
+          <Field label="کد تأیید گوگل سرچ کنسول (فقط مقدار content)"><input name="googleVerification" defaultValue={s.googleVerification} className="input" dir="ltr" placeholder="مثلاً: abc123XYZ..." /></Field>
+          <Field label="کد تأیید Bing (msvalidate.01)"><input name="bingVerification" defaultValue={s.bingVerification} className="input" dir="ltr" /></Field>
+        </section>
         <Submit className="btn-primary w-full !py-4">ذخیره همه</Submit>
       </Form>
     </div>

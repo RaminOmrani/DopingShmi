@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_rethrow } from "next/navigation";
 import { getUser, isAdmin } from "./auth";
 
 export type Result = { ok?: boolean; error?: string; message?: string; data?: unknown } | null;
@@ -13,6 +14,7 @@ export function adminAction(fn: (fd: FormData) => Promise<Result | void>) {
     try {
       return (await fn(fd)) ?? { ok: true };
     } catch (e) {
+      unstable_rethrow(e); // redirect() و notFound() باید به Next برسند
       if (e instanceof ActionError) return { error: e.message };
       console.error(e);
       return { error: "خطا در انجام عملیات" };

@@ -13,7 +13,8 @@
     "start": "next start -p ${PORT:-3000}",
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts && tsx prisma/seed-articles.ts",
+    "db:seed-articles": "tsx prisma/seed-articles.ts",
     "db:studio": "prisma studio",
     "icons": "tsx scripts/make-icons.ts",
     "postinstall": "prisma generate"

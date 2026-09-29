@@ -42,6 +42,9 @@ export function Footer({ site }: { site: SiteContent }) {
         <div>
           <p className="mb-4 font-bold">دسترسی سریع</p>
           <div className="grid grid-cols-2 gap-2 text-sm text-white/60">
+            <Link href="/javad-partovi" className="hover:text-cyan">استاد {site.teacherName}</Link>
+            <Link href="/tadris-shimi" className="hover:text-cyan">تدریس شیمی</Link>
+            <Link href="/articles" className="hover:text-cyan">مقالات آموزشی</Link>
             <Link href="/courses" className="hover:text-cyan">ویدیوهای آموزشی</Link>
             <Link href="/gallery" className="hover:text-cyan">گالری همایش‌ها</Link>
             <Link href="/login" className="hover:text-cyan">ورود دانش‌آموزان</Link>

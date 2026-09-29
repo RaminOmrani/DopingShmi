@@ -4,7 +4,11 @@ import { GRADES, gradeLabel } from "@/lib/constants";
 import { faNum, fmtToman } from "@/lib/utils";
 import { PlayCircle, Gift, Package } from "lucide-react";
 
-export const metadata = { title: "ویدیوهای آموزشی شیمی" };
+export const metadata = {
+  title: "ویدیوهای آموزشی شیمی دهم، یازدهم، دوازدهم و کنکور",
+  description: "ویدیوهای تدریس شیمی مبحث‌به‌مبحث با استاد جواد پرتویی — دوپینگ شیمی. از هر مبحث یک جلسه رایگان.",
+  alternates: { canonical: "/courses" },
+};
 export const revalidate = 60;
 
 export default async function Courses() {

@@ -30,6 +30,12 @@ export const saveContent = adminAction(async (fd) => {
     address: str(fd, "address"),
     mapUrl: str(fd, "mapUrl"),
     footerText: str(fd, "footerText"),
+    seoTitle: str(fd, "seoTitle") || `${str(fd, "brand")} | تدریس شیمی کنکور با استاد ${str(fd, "teacherName")}`,
+    seoDescription: str(fd, "seoDescription"),
+    city: str(fd, "city") || "مشهد",
+    // اگر کل تگ متا چسبانده شد، فقط مقدار content را نگه می‌داریم
+    googleVerification: str(fd, "googleVerification").replace(/^.*content=["']([^"']+)["'].*$/s, "$1"),
+    bingVerification: str(fd, "bingVerification").replace(/^.*content=["']([^"']+)["'].*$/s, "$1"),
   });
   revalidatePath("/", "layout");
   return { ok: true };

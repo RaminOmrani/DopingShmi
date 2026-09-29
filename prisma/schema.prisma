@@ -363,3 +363,22 @@ model SmsCampaign {
   status      String   @default("RUNNING")
   createdAt   DateTime @default(now())
 }
+
+/// مقالات آموزشی (برای سئو و محتوای سایت)
+model Article {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String?
+  body        String // متن ساده با قالب‌بندی سبک: ## تیتر، - فهرست، **پررنگ**
+  cover       String?
+  category    String?
+  keywords    String?
+  published   Boolean  @default(false)
+  views       Int      @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([published, publishedAt])
+}

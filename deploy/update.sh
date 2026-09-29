@@ -21,6 +21,7 @@ export NODE_OPTIONS="--max-old-space-size=1536"
 git pull --ff-only
 pnpm install --frozen-lockfile
 pnpm db:push
+pnpm db:seed-articles
 add_temp_swap
 nice -n 19 pnpm build
 remove_temp_swap

@@ -12,8 +12,16 @@ import { gradeLabel } from "@/lib/constants";
 import { faNum } from "@/lib/utils";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import type { Metadata } from "next";
+import { JsonLd } from "@/components/JsonLd";
+import { SITE_URL, ldGraph, orgLd, personLd, websiteLd } from "@/lib/seo";
 
 export const revalidate = 60;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSetting("site");
+  return { title: { absolute: s.seoTitle }, description: s.seoDescription, alternates: { canonical: "/" }, openGraph: { url: SITE_URL, title: s.seoTitle, description: s.seoDescription } };
+}
 
 const credIcons = [GraduationCap, BadgeCheck, BookOpenCheck, PenTool, Award];
 
@@ -31,6 +39,7 @@ export default async function Home() {
 
   return (
     <main>
+      <JsonLd data={ldGraph(websiteLd(site), orgLd(site), personLd(site, teacherImg))} />
       {/* ───────── HERO ───────── */}
       <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden pt-24">
         <div className="grid-bg absolute inset-0 -z-10" />
@@ -45,6 +54,7 @@ export default async function Home() {
             </Reveal>
             <Reveal delay={0.1}>
               <h1 className="text-5xl font-black leading-[1.15] tracking-tight md:text-7xl">
+                <span className="mb-3 block text-base font-bold tracking-normal text-white/70 md:text-xl">{site.brand} · تدریس شیمی با استاد {site.teacherName}</span>
                 <span className="text-shine">{site.heroTitle}</span>
               </h1>
             </Reveal>

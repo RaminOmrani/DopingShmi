@@ -18,6 +18,12 @@ export interface SiteContent {
   address: string;
   mapUrl: string;
   footerText: string;
+  /** سئو */
+  seoTitle: string;
+  seoDescription: string;
+  city: string;
+  googleVerification: string;
+  bingVerification: string;
 }
 
 export interface SmsSettings {
@@ -110,6 +116,12 @@ export const DEFAULT_SETTINGS: Settings = {
     address: "مشهد",
     mapUrl: "",
     footerText: "تمامی حقوق برای دوپینگ شیمی محفوظ است.",
+    seoTitle: "دوپینگ شیمی | تدریس شیمی کنکور با استاد جواد پرتویی",
+    seoDescription:
+      "دوپینگ شیمی؛ تدریس شیمی کنکور و دبیرستان با استاد جواد پرتویی در مشهد — مدرس رتبه‌های ۱۰، ۳۸ و ۱۰۸ کنکور ۱۴۰۴، کلاس خصوصی و گروهی، همایش، ویدیوهای آموزشی و آزمون آنلاین.",
+    city: "مشهد",
+    googleVerification: "",
+    bingVerification: "",
   },
   sms: { provider: "mock", username: "", password: "", apiKey: "", from: "", usePatterns: true, parentSms: true },
   arvan: { apiKey: "", secureLink: true, bindIp: false, expireMinutes: 180, watermark: true },
