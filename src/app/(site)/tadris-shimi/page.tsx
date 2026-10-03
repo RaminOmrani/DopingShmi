@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { SITE_URL, breadcrumbLd, faqLd, ldGraph, orgLd, personLd } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
+import { GRADE_LIST } from "@/lib/syllabus";
 import { gradeLabel } from "@/lib/constants";
 import { faNum } from "@/lib/utils";
 
@@ -88,6 +89,15 @@ export default async function TadrisPage() {
           </div>
         </section>
       )}
+
+      <section className="mb-14">
+        <h2 className="mb-5 text-2xl font-black">راهنمای آموزش شیمی هر پایه</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[{ href: "/shimi-konkur", t: "شیمی کنکور" }, ...GRADE_LIST.map((g) => ({ href: g.path, t: `آموزش شیمی ${g.name}` }))].map((l) => (
+            <Link key={l.href} href={l.href} className="card flex items-center justify-between p-4 font-bold hover:border-cyan/30">{l.t}<ChevronLeft className="size-4 text-white/40" /></Link>
+          ))}
+        </div>
+      </section>
 
       <section className="mb-14">
         <h2 className="mb-5 text-2xl font-black">سؤالات متداول درباره‌ی تدریس شیمی</h2>

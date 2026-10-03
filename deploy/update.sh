@@ -22,6 +22,7 @@ git pull --ff-only
 pnpm install --frozen-lockfile
 pnpm db:push
 pnpm db:seed-articles
+pnpm db:fixes
 add_temp_swap
 nice -n 19 pnpm build
 remove_temp_swap

@@ -14,9 +14,17 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
-import { SITE_URL, ldGraph, orgLd, personLd, websiteLd } from "@/lib/seo";
+import { SITE_URL, faqLd, ldGraph, orgLd, personLd, websiteLd } from "@/lib/seo";
+import { GRADE_LIST } from "@/lib/syllabus";
 
 export const revalidate = 60;
+
+/** پرسش و پاسخ برند: هم در صفحه دیده می‌شود و هم برای گوگل (FAQPage) — تا «دوپینگ شیمی» با این مجموعه شناخته شود */
+const brandFaq = (brand: string, teacher: string) => [
+  { q: `${brand} چیست؟`, a: `${brand} نام مجموعه‌ی آموزشی و کتاب‌های شیمی استاد ${teacher}، دبیر شیمی و مدرس شیمی کنکور در مشهد است؛ شامل کلاس خصوصی و گروهی، همایش‌های جمع‌بندی، ویدیوهای آموزشی و آزمون آنلاین شیمی دهم، یازدهم، دوازدهم و کنکور.` },
+  { q: `مدرس ${brand} کیست؟`, a: `استاد ${teacher}، کارشناس ارشد مهندسی شیمی از دانشگاه فردوسی مشهد، عضو بنیاد ملی نخبگان، طراح آزمون‌های قلم‌چی و خیلی سبز و مدرس رتبه‌های ۱۰، ۳۸ و ۱۰۸ کنکور ۱۴۰۴.` },
+  { q: `اپلیکیشن ${brand} چه امکاناتی دارد؟`, a: "ویدیوهای تدریس مبحث‌به‌مبحث (جلسه‌ی اول هر مبحث رایگان)، آزمون آنلاین با کارنامه، نمودار پیشرفت نسبت به گروه، امتیاز و رتبه‌بندی، و اطلاع‌رسانی کلاس‌ها با پیامک." },
+];
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSetting("site");
@@ -39,7 +47,7 @@ export default async function Home() {
 
   return (
     <main>
-      <JsonLd data={ldGraph(websiteLd(site), orgLd(site), personLd(site, teacherImg))} />
+      <JsonLd data={ldGraph(websiteLd(site), orgLd(site), personLd(site, teacherImg), faqLd(brandFaq(site.brand, site.teacherName)))} />
       {/* ───────── HERO ───────── */}
       <section className="relative isolate flex min-h-[100svh] items-center overflow-hidden pt-24">
         <div className="grid-bg absolute inset-0 -z-10" />
@@ -271,6 +279,45 @@ export default async function Home() {
           </div>
         </section>
       )}
+
+      {/* ───────── دوپینگ شیمی چیست + مسیرهای آموزشی ───────── */}
+      <section className="relative py-20">
+        <div className="mx-auto grid max-w-7xl gap-6 px-5 lg:grid-cols-[1fr_1.1fr]">
+          <Reveal>
+            <div className="card h-full p-7">
+              <p className="mb-2 text-sm font-bold text-cyan">درباره‌ی برند</p>
+              <h2 className="mb-5 text-2xl font-black md:text-3xl">درباره‌ی {site.brand}</h2>
+              <div className="space-y-4">
+                {brandFaq(site.brand, site.teacherName).map((f) => (
+                  <div key={f.q}>
+                    <h3 className="mb-1 font-black">{f.q}</h3>
+                    <p className="text-sm leading-8 text-white/70">{f.a}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="card h-full p-7">
+              <p className="mb-2 text-sm font-bold text-cyan">مسیرهای آموزشی</p>
+              <h2 className="mb-5 text-2xl font-black md:text-3xl">آموزش و تدریس شیمی</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { href: "/shimi-konkur", t: "شیمی کنکور", d: "سرفصل‌ها، روش مطالعه و مسیر آمادگی" },
+                  ...GRADE_LIST.map((g) => ({ href: g.path, t: `آموزش شیمی ${g.name}`, d: `${faNum(g.chapters.length)} فصل · نکات مهم هر فصل` })),
+                  { href: "/tadris-shimi", t: "تدریس شیمی و کلاس خصوصی", d: `کلاس خصوصی، گروهی و همایش در ${site.city}` },
+                  { href: "/articles", t: "مقالات آموزشی", d: "روش مطالعه و نکته‌های تستی" },
+                ].map((l) => (
+                  <Link key={l.href} href={l.href} className="group rounded-2xl border border-white/10 bg-white/[.03] p-4 transition hover:border-cyan/30 hover:bg-white/[.06]">
+                    <p className="flex items-center justify-between font-black group-hover:text-cyan">{l.t}<ChevronLeft className="size-4 text-white/40" /></p>
+                    <p className="mt-1 text-xs text-white/50">{l.d}</p>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
       {/* ───────── CTA + CONTACT ───────── */}
       <section id="contact" className="relative py-20">
