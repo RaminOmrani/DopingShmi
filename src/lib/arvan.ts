@@ -1,5 +1,6 @@
 import "server-only";
 import { getSetting } from "./settings";
+import { ARVAN_API as API, arvanApi, authHeader } from "./arvan-api";
 
 /**
  * پلتفرم ویدیوی ابر آروان (VOD 2.0).
@@ -7,7 +8,6 @@ import { getSetting } from "./settings";
  * با فعال بودن «لینک امن» روی کانال، لینک پخش با تاریخ انقضا (و در صورت تمایل IP کاربر) از API گرفته می‌شود
  * تا لینک قابل اشتراک‌گذاری نباشد.
  */
-const API = "https://napi.arvancloud.ir/vod/2.0";
 
 export interface ArvanVideo {
   id: string;
@@ -21,11 +21,6 @@ export interface ArvanVideo {
 }
 
 const cache = new Map<string, { at: number; v: ArvanVideo }>();
-
-function authHeader(key: string) {
-  const k = key.trim();
-  return /^apikey\s/i.test(k) ? k : `Apikey ${k}`;
-}
 
 export async function arvanRequest(path: string, init: RequestInit = {}) {
   const s = await getSetting("arvan");
@@ -76,4 +71,11 @@ export async function getPlayback(videoId: string, ip?: string): Promise<ArvanVi
 export async function arvanChannels() {
   const r = await arvanRequest("/channels");
   return (r?.data ?? []) as { id: string; title: string; secure_link_enabled?: boolean }[];
+}
+
+/** کلاینت API با کلید ذخیره‌شده در تنظیمات */
+export async function arvanClient() {
+  const s = await getSetting("arvan");
+  if (!s.apiKey) throw new Error("کلید API آروان در تنظیمات ثبت نشده است");
+  return arvanApi(s.apiKey);
 }

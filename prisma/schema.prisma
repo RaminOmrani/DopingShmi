@@ -382,3 +382,22 @@ model Article {
 
   @@index([published, publishedAt])
 }
+
+/// انتقال ویدیو از تلگرام به آروان (اسکریپت scripts/tg.ts) — هر پیام تلگرام یک ردیف
+model VideoImport {
+  id           String   @id @default(cuid())
+  sourceKey    String   @unique // tg:<chatId>:<messageId>
+  title        String
+  fileName     String?
+  size         Float    @default(0) // بایت
+  status       String   @default("PENDING") // PENDING | DOWNLOADING | UPLOADING | DONE | FAILED
+  progress     Int      @default(0) // درصد مرحله‌ی فعلی
+  uploadUrl    String? // آدرس TUS آروان برای ادامه‌ی آپلود نیمه‌کاره
+  arvanVideoId String?
+  error        String?
+  attempts     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+}

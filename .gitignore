@@ -9,3 +9,7 @@ src/generated/
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# انتقال تلگرام (scripts/tg.ts)
+tg-tmp/
+.telegram-session.json

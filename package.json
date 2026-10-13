@@ -16,6 +16,7 @@
     "db:seed": "tsx prisma/seed.ts && tsx prisma/seed-articles.ts",
     "db:seed-articles": "tsx prisma/seed-articles.ts",
     "db:fixes": "tsx prisma/data-fixes.ts",
+    "tg": "tsx scripts/tg.ts",
     "db:studio": "prisma studio",
     "icons": "tsx scripts/make-icons.ts",
     "postinstall": "prisma generate"
@@ -32,6 +33,7 @@
     "@fontsource-variable/vazirmatn": "^5.3.0",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
+    "big-integer": "^1.6.52",
     "clsx": "^2.1.1",
     "dotenv": "^18.0.4",
     "exceljs": "^4.4.0",
@@ -47,6 +49,7 @@
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "sharp": "^0.35.4",
+    "telegram": "^2.26.22",
     "zod": "^4.6.5"
   },
   "devDependencies": {
