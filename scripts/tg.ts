@@ -161,6 +161,13 @@ async function resolveChat(client: TelegramClient, arg: string) {
   }
 }
 
+/** عنوان از کپشن یا نام فایل؛ عنوان‌های بی‌معنی/خیلی کوتاه (مثل «1») با شماره‌ی ویدیو کامل می‌شوند */
+function videoTitle(raw: string, n: number) {
+  const t = raw.replace(/\s+/g, " ").trim().slice(0, 150);
+  if (!t) return `ویدیو ${n}`;
+  return t.length < 5 || /^[\d\s._-]+$/.test(t) ? `ویدیو ${n} - ${t}` : t;
+}
+
 interface TgVideo {
   n: number;
   msgId: number;
@@ -190,7 +197,7 @@ async function listVideos(client: TelegramClient, entity: Api.TypeEntityLike, in
     out.push({
       n,
       msgId: m.id,
-      title: (caption || (fname ? path.basename(fname, path.extname(fname)) : "") || `ویدیو ${n}`).slice(0, 150),
+      title: videoTitle(caption || (fname ? path.basename(fname, path.extname(fname)) : ""), n),
       fileName: fname || `video-${m.id}${ext}`,
       mime: doc.mimeType || "video/mp4",
       size: Number(doc.size),
@@ -465,7 +472,7 @@ async function runImport(arg: string, o: { includeOut: boolean; limit: number; p
     const row = await db.videoImport.upsert({
       where: { sourceKey: key },
       create: { sourceKey: key, title: v.title, fileName: v.fileName, size: v.size },
-      update: {},
+      update: { title: v.title },
     });
     if (row.status === "DONE") {
       skipped++;

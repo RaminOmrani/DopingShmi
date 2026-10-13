@@ -12,6 +12,12 @@ export function authHeader(key: string) {
 const b64 = (s: string) => Buffer.from(s, "utf8").toString("base64");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** عنوان قابل قبول آروان: عنوان‌های خیلی کوتاه (مثل «1») رد می‌شوند */
+export const arvanTitle = (t: string) => {
+  const s = t.trim().slice(0, 200);
+  return s.length >= 5 ? s : `ویدیو ${s || "بدون عنوان"}`;
+};
+
 export interface ArvanListVideo {
   id: string;
   title: string;
@@ -34,7 +40,11 @@ export function arvanApi(apiKey: string) {
       cache: "no-store",
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.message || `خطای آروان (${res.status})`);
+    if (!res.ok) {
+      // خطای اعتبارسنجی آروان: {message, errors: {field: [..]}} — جزئیات فیلد را هم نشان می‌دهیم
+      const details = data?.errors && typeof data.errors === "object" ? Object.entries(data.errors as Record<string, unknown>).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join("، ") : v}`).join(" | ") : "";
+      throw new Error(`${data?.message || `خطای آروان (${res.status})`}${details ? ` — ${details}` : ""}`);
+    }
     return data;
   }
 
@@ -106,7 +116,7 @@ export function arvanApi(apiKey: string) {
     /** تبدیل فایل آپلودشده به ویدیو؛ خروجی: شناسه‌ی ویدیو */
     async createVideo(channelId: string, o: { title: string; fileId: string; profileId?: string }) {
       const body = {
-        title: o.title.slice(0, 200),
+        title: arvanTitle(o.title),
         file_id: o.fileId,
         convert_mode: o.profileId ? "profile" : "auto",
         ...(o.profileId ? { profile_id: o.profileId } : {}),
@@ -120,7 +130,7 @@ export function arvanApi(apiKey: string) {
     },
 
     async updateVideo(videoId: string, title: string) {
-      await json(`/videos/${encodeURIComponent(videoId)}`, { method: "PATCH", body: JSON.stringify({ title: title.slice(0, 200) }) });
+      await json(`/videos/${encodeURIComponent(videoId)}`, { method: "PATCH", body: JSON.stringify({ title: arvanTitle(title) }) });
     },
 
     /** همه‌ی ویدیوهای یک کانال (همه‌ی صفحه‌ها) */
