@@ -74,8 +74,8 @@ export function arvanApi(apiKey: string) {
 
     offset,
 
-    /** ارسال فایل از offset مشخص؛ در خطا offset واقعی را می‌پرسد و ادامه می‌دهد */
-    async upload(uploadUrl: string, readChunk: (pos: number, len: number) => Buffer, size: number, from: number, onProgress?: (sent: number) => void) {
+    /** ارسال فایل از offset مشخص؛ در خطا (از جمله خطای خواندن تکه) offset واقعی را می‌پرسد و ادامه می‌دهد */
+    async upload(uploadUrl: string, readChunk: (pos: number, len: number) => Buffer | Promise<Buffer>, size: number, from: number, onProgress?: (sent: number) => void) {
       const CHUNK = 8 * 1024 * 1024; // تکه‌های کوچک: گزارش پیشرفت دقیق‌تر و ارسال دوباره‌ی کمتر هنگام قطعی
       let pos = from;
       let fails = 0;
@@ -85,7 +85,7 @@ export function arvanApi(apiKey: string) {
           const res = await fetch(uploadUrl, {
             method: "PATCH",
             headers: { Authorization: auth, "tus-resumable": "1.0.0", "upload-offset": String(pos), "content-type": "application/offset+octet-stream" },
-            body: new Uint8Array(readChunk(pos, len)),
+            body: new Uint8Array(await readChunk(pos, len)),
             signal: AbortSignal.timeout(15 * 60 * 1000),
           });
           if (!res.ok) throw new Error(`HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
