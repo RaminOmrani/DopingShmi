@@ -39,7 +39,14 @@ export default async function ArvanVideos() {
   } catch (e) {
     error = (e as Error).message;
   }
-  all = all.sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+  // ترتیب گفتگوی تلگرام (چند ویدیو هم‌زمان منتقل می‌شوند و ممکن است جابه‌جا به آروان برسند)
+  const tgOrder = new Map(
+    imports
+      .filter((r) => r.arvanVideoId)
+      .sort((a, b) => Number(a.sourceKey.split(":").pop()) - Number(b.sourceKey.split(":").pop()))
+      .map((r, i) => [r.arvanVideoId as string, i + 1]),
+  );
+  all = all.sort((a, b) => (tgOrder.get(a.id) ?? 1e9) - (tgOrder.get(b.id) ?? 1e9) || (a.createdAt || "").localeCompare(b.createdAt || ""));
   const unlinked = all.filter((v) => !linkedIds.has(v.id));
 
   const done = imports.filter((r) => r.status === "DONE");
@@ -117,7 +124,7 @@ export default async function ArvanVideos() {
                     ) : (
                       <Film className="absolute inset-0 m-auto size-6 text-white/30" />
                     )}
-                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px]">{faNum(i + 1)}</span>
+                    <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px]" title="شماره در گفتگوی تلگرام">{faNum(tgOrder.get(v.id) ?? i + 1)}</span>
                   </div>
                   <Field label={`عنوان در سایت · ${v.duration ? fmtClock(v.duration) : "مدت نامشخص"}`}>
                     <input name="title" defaultValue={v.title} className="input" required />

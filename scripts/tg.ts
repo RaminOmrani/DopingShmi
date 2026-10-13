@@ -4,8 +4,9 @@
  *   pnpm tg login                          ورود یک‌باره به تلگرام (api_id و api_hash از my.telegram.org)
  *   pnpm tg chats                          فهرست گفتگوهای اخیر و شناسه‌ی هر کدام
  *   pnpm tg videos <chat> [--all]          فهرست ویدیوهای یک گفتگو (بدون انتقال)
- *   pnpm tg import <chat> [--all] [--limit N] [--channel ID] [--profile ID]
+ *   pnpm tg import <chat> [--all] [--limit N] [--parallel N] [--channel ID] [--profile ID]
  *                                          انتقال به آروان؛ قابل ادامه — ویدیوهای منتقل‌شده دوباره منتقل نمی‌شوند
+ *                                          ‎--parallel: چند ویدیو هم‌زمان (پیش‌فرض ۲، حداکثر ۴)
  *   pnpm tg status                         وضعیت انتقال‌ها
  *   pnpm tg logout                         خروج و حذف نشست تلگرام از سرور
  *
@@ -34,6 +35,7 @@ const TMP_DIR = path.join(DATA_DIR, "tg-tmp");
 const LOCK_FILE = path.join(TMP_DIR, ".lock");
 const CHUNK = 512 * 1024; // حداکثر اندازه‌ی هر درخواست دانلود تلگرام
 const TTY = process.stdout.isTTY;
+let LIVE = TTY; // خط پیشرفت زنده؛ وقتی چند ویدیو هم‌زمان منتقل می‌شوند، گزارش خط‌به‌خط
 
 const die = (msg: string): never => {
   console.error(`\n✖ ${msg}`);
@@ -230,7 +232,7 @@ function takeLock() {
 }
 
 /** گزارش پیشرفت: در ترمینال یک خط زنده، در فایل لاگ هر ۳۰ ثانیه یک خط؛ در دیتابیس هر ۱۰ ثانیه */
-function progress(id: string, label: string, total: number, start = 0) {
+function progress(id: string, label: string, total: number, start = 0, tag = "") {
   let lastLog = 0;
   let lastDb = 0;
   const samples: [number, number][] = [[Date.now(), start]]; // سرعت در ۲۰ ثانیه‌ی اخیر
@@ -243,9 +245,9 @@ function progress(id: string, label: string, total: number, start = 0) {
     const left = speed > 0 ? (total - done) / speed : 0;
     const eta = left > 3600 ? `${(left / 3600).toFixed(1)}h` : left > 0 ? `${Math.ceil(left / 60)}m` : "";
     const pct = Math.min(100, Math.floor((done / total) * 100));
-    const line = `   ${label} ${pct}%  ${mb(done)}/${mb(total)}  ${mb(speed)}/s${eta ? `  ~${eta}` : ""}`;
-    if (TTY) process.stdout.write(`\r${line.padEnd(78)}`);
-    else if (now - lastLog > 30000) {
+    const line = `   ${tag}${label} ${pct}%  ${mb(done)}/${mb(total)}  ${mb(speed)}/s${eta ? `  ~${eta}` : ""}`;
+    if (LIVE) process.stdout.write(`\r${line.padEnd(78)}`);
+    else if (now - lastLog > (TTY ? 15000 : 30000)) {
       console.log(line);
       lastLog = now;
     }
@@ -256,39 +258,106 @@ function progress(id: string, label: string, total: number, start = 0) {
   };
 }
 
-async function download(client: TelegramClient, entity: Api.TypeEntityLike, v: TgVideo, file: string, onProgress: (n: number) => void) {
-  let have = fs.existsSync(file) ? fs.statSync(file).size : 0;
-  if (have > v.size) {
-    fs.rmSync(file);
-    have = 0;
-  }
-  if (have === v.size) return;
-  const start = Math.floor(have / CHUNK) * CHUNK; // ادامه از آخرین تکه‌ی کامل
-  if (start !== have) fs.truncateSync(file, start);
-  const free = freeBytes(TMP_DIR);
-  if (free < v.size - start + 1024 ** 3) die(`فضای خالی دیسک کافی نیست (${gb(free)} آزاد، ${gb(v.size - start)} لازم + ۱GB حاشیه)`);
+const SEGMENT = 16 * 1024 * 1024; // هر بخش ۱۶ مگ؛ چند بخش هم‌زمان دانلود می‌شوند
+const SEG_WORKERS = 4;
+/** دانلودهای در جریان (برای حساب فضای دیسک وقتی چند ویدیو هم‌زمان منتقل می‌شوند) */
+const activeDownloads = new Map<string, { file: string; size: number }>();
 
-  // پیام تازه برای اعتبار fileReference
-  const [msg] = await client.getMessages(entity, { ids: v.msgId });
-  if (!(msg?.media instanceof Api.MessageMediaDocument)) throw new Error("پیام ویدیو در تلگرام پیدا نشد (حذف شده؟)");
-  const fd = fs.openSync(file, start ? "a" : "w");
-  let done = start;
-  try {
-    for await (const chunk of client.iterDownload({
-      file: msg.media,
-      offset: bigInt(start),
-      requestSize: CHUNK,
-      limit: Math.ceil((v.size - start) / CHUNK),
-      msgData: [entity, v.msgId],
-    })) {
-      fs.writeSync(fd, chunk);
-      done += chunk.length;
-      onProgress(done);
-    }
-  } finally {
-    fs.closeSync(fd);
+/** فضای لازم برای بقیه‌ی دانلودهای در جریان */
+function reservedByOthers(file: string) {
+  let r = 0;
+  for (const a of activeDownloads.values()) {
+    if (a.file === file) continue;
+    const have = fs.existsSync(a.file) ? fs.statSync(a.file).size : 0;
+    r += Math.max(0, a.size - have);
   }
-  if (fs.statSync(file).size !== v.size) throw new Error(`دانلود ناقص ماند (${mb(fs.statSync(file).size)} از ${mb(v.size)})`);
+  return r;
+}
+
+/**
+ * دانلود قابل ادامه با چند درخواست هم‌زمان: فایل به بخش‌های ۱۶ مگی تقسیم می‌شود و بخش‌های تمام‌شده
+ * در فایل ‎.parts کنار ویدیو ثبت می‌شوند تا بعد از قطعی فقط بخش‌های ناتمام دوباره گرفته شوند.
+ */
+async function download(client: TelegramClient, entity: Api.TypeEntityLike, v: TgVideo, file: string, onProgress: (n: number) => void) {
+  const partsFile = `${file}.parts`;
+  const count = Math.ceil(v.size / SEGMENT);
+  const segLen = (k: number) => Math.min(SEGMENT, v.size - k * SEGMENT);
+  const done = new Set<number>();
+  if (fs.existsSync(file)) {
+    const have = fs.statSync(file).size;
+    if (have > v.size) fs.rmSync(file);
+    else if (fs.existsSync(partsFile)) {
+      try {
+        for (const k of JSON.parse(fs.readFileSync(partsFile, "utf8")) as number[]) if (k >= 0 && k < count) done.add(k);
+      } catch {
+        /* فایل ثبت بخش‌ها خراب است؛ از اول */
+      }
+    } else for (let k = 0; (k + 1) * SEGMENT <= have || (k === count - 1 && have === v.size); k++) done.add(k); // دانلود پیوسته‌ی نسخه‌ی قبلی
+  }
+  if (done.size === count && fs.existsSync(file) && fs.statSync(file).size === v.size) return;
+
+  activeDownloads.set(file, { file, size: v.size });
+  try {
+    let have = 0;
+    for (const k of done) have += segLen(k);
+    // فضای دیسک: اگر دانلود دیگری هم در جریان است صبر می‌کنیم تا جا باز شود
+    for (;;) {
+      const need = v.size - have + reservedByOthers(file) + 1024 ** 3;
+      const free = freeBytes(TMP_DIR);
+      if (free >= need) break;
+      if (activeDownloads.size <= 1) die(`فضای خالی دیسک کافی نیست (${gb(free)} آزاد، ${gb(need)} لازم با ۱GB حاشیه)`);
+      await new Promise((r) => setTimeout(r, 30000));
+    }
+
+    // پیام تازه برای اعتبار fileReference
+    const [msg] = await client.getMessages(entity, { ids: v.msgId });
+    if (!(msg?.media instanceof Api.MessageMediaDocument)) throw new Error("پیام ویدیو در تلگرام پیدا نشد (حذف شده؟)");
+    const media = msg.media;
+    const fd = fs.openSync(file, fs.existsSync(file) ? "r+" : "w+");
+    let saveTimer: NodeJS.Timeout | undefined;
+    const saveParts = () => fs.writeFileSync(partsFile, JSON.stringify([...done]));
+    try {
+      const queue = Array.from({ length: count }, (_, k) => k).filter((k) => !done.has(k));
+      let failure: unknown;
+      // هر بخش‌گیر خطای خودش را ثبت می‌کند و بقیه با دیدن آن متوقف می‌شوند؛ فایل فقط بعد از توقف همه بسته می‌شود
+      const worker = async () => {
+        try {
+          for (let k = queue.shift(); k !== undefined && !failure; k = queue.shift()) {
+            const start = k * SEGMENT;
+            const len = segLen(k);
+            let pos = start;
+            for await (const chunk of client.iterDownload({ file: media, offset: bigInt(start), requestSize: CHUNK, limit: Math.ceil(len / CHUNK), msgData: [entity, v.msgId] })) {
+              if (failure) return;
+              const n = Math.min(chunk.length, start + len - pos);
+              fs.writeSync(fd, chunk, 0, n, pos);
+              pos += n;
+              have += n;
+              onProgress(have);
+              if (pos >= start + len) break;
+            }
+            if (pos < start + len) throw new Error(`بخش ${k + 1} ناقص دانلود شد`);
+            done.add(k);
+            saveTimer ??= setTimeout(() => {
+              saveTimer = undefined;
+              saveParts();
+            }, 2000);
+          }
+        } catch (e) {
+          failure ??= e;
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(SEG_WORKERS, queue.length) }, worker));
+      if (failure) throw failure;
+    } finally {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveParts();
+      fs.closeSync(fd);
+    }
+    if (done.size !== count || fs.statSync(file).size !== v.size) throw new Error(`دانلود ناقص ماند (${mb(fs.statSync(file).size)} از ${mb(v.size)})`);
+    fs.rmSync(partsFile, { force: true });
+  } finally {
+    activeDownloads.delete(file);
+  }
 }
 
 async function pickChannel(api: ReturnType<typeof arvanApi>, wanted?: string) {
@@ -301,7 +370,7 @@ async function pickChannel(api: ReturnType<typeof arvanApi>, wanted?: string) {
   return die("کانال مشخص نشد");
 }
 
-async function runImport(arg: string, o: { includeOut: boolean; limit: number; channel?: string; profile?: string }) {
+async function runImport(arg: string, o: { includeOut: boolean; limit: number; parallel: number; channel?: string; profile?: string }) {
   takeLock();
   const setting = await db.setting.findUnique({ where: { key: "arvan" } });
   const apiKey = (setting?.value as { apiKey?: string } | null)?.apiKey || die("کلید API آروان را در پنل مدیریت ← تنظیمات وارد کنید");
@@ -314,19 +383,22 @@ async function runImport(arg: string, o: { includeOut: boolean; limit: number; c
     process.on(sig, () => {
       if (stopping) process.exit(1);
       stopping = true;
-      console.log("\n… بعد از ذخیره‌ی وضعیت متوقف می‌شود (اجرای دوباره از همین‌جا ادامه می‌دهد)");
+      console.log("\n… متوقف می‌شود (اجرای دوباره از همین‌جا ادامه می‌دهد)");
       finish(client, 130);
     });
 
   const chat = await resolveChat(client, arg);
   const all = await listVideos(client, chat.entity, o.includeOut);
   const list = o.limit ? all.slice(0, o.limit) : all;
-  console.log(`\n▶ ${new Date().toLocaleString("fa-IR")} — «${chat.title}» ← کانال آروان «${channel.title}»: ${list.length} ویدیو، ${gb(list.reduce((a, v) => a + v.size, 0))}\n`);
+  const parallel = Math.max(1, Math.min(4, o.parallel || 1, list.length || 1));
+  LIVE = TTY && parallel === 1;
+  console.log(`\n▶ ${new Date().toLocaleString("fa-IR")} — «${chat.title}» ← کانال آروان «${channel.title}»: ${list.length} ویدیو، ${gb(list.reduce((a, v) => a + v.size, 0))} (${parallel} ویدیو هم‌زمان)\n`);
 
   let ok = 0;
   let skipped = 0;
   let failed = 0;
-  for (const v of list) {
+
+  async function transfer(v: TgVideo) {
     const key = `tg:${chat.id}:${v.msgId}`;
     const row = await db.videoImport.upsert({
       where: { sourceKey: key },
@@ -335,15 +407,16 @@ async function runImport(arg: string, o: { includeOut: boolean; limit: number; c
     });
     if (row.status === "DONE") {
       skipped++;
-      continue;
+      return;
     }
+    const tag = parallel > 1 ? `[${v.n}] ` : "";
     console.log(`[${v.n}/${all.length}] ${v.title} (${mb(v.size)})`);
     const tmp = path.join(TMP_DIR, `${chat.id}-${v.msgId}${path.extname(v.fileName) || ".mp4"}`);
     try {
       await db.videoImport.update({ where: { id: row.id }, data: { status: "DOWNLOADING", progress: 0, error: null, attempts: { increment: 1 } } });
-      const have = fs.existsSync(tmp) ? fs.statSync(tmp).size : 0;
-      await download(client, chat.entity, v, tmp, progress(row.id, "دانلود از تلگرام", v.size, have));
-      if (TTY) process.stdout.write("\n");
+      await download(client, chat.entity, v, tmp, progress(row.id, "دانلود از تلگرام", v.size, 0, tag));
+      if (LIVE) process.stdout.write("\n");
+      else console.log(`   ${tag}دانلود تمام شد؛ ارسال به آروان…`);
 
       let url = row.uploadUrl;
       let from = url ? await api.offset(url).catch(() => null) : null;
@@ -363,27 +436,36 @@ async function runImport(arg: string, o: { includeOut: boolean; limit: number; c
           },
           v.size,
           from,
-          progress(row.id, "ارسال به آروان", v.size, from),
+          progress(row.id, "ارسال به آروان", v.size, from, tag),
         );
       } finally {
         fs.closeSync(fd);
       }
-      if (TTY) process.stdout.write("\n");
+      if (LIVE) process.stdout.write("\n");
 
       const videoId = await api.createVideo(channel.id, { title: v.title, fileId: fileIdFromUploadUrl(url), profileId: o.profile });
       await db.videoImport.update({ where: { id: row.id }, data: { status: "DONE", progress: 100, arvanVideoId: videoId, uploadUrl: null } });
       fs.rmSync(tmp, { force: true });
       ok++;
-      console.log(`   ✔ در آروان ثبت شد (در حال تبدیل کیفیت) — ${videoId}`);
+      console.log(`   ${tag}✔ در آروان ثبت شد (در حال تبدیل کیفیت) — ${videoId}  [${ok + skipped}/${list.length}]`);
     } catch (e) {
       if (stopping) return;
       failed++;
       const msg = (e as Error).message || String(e);
-      if (TTY) process.stdout.write("\n");
-      console.error(`   ✖ ${msg}`);
+      if (LIVE) process.stdout.write("\n");
+      console.error(`   ${tag}✖ ${msg}`);
       await db.videoImport.update({ where: { id: row.id }, data: { status: "FAILED", error: msg.slice(0, 500) } }).catch(() => {});
     }
   }
+
+  // چند ویدیو هم‌زمان: وقتی یکی در حال ارسال به آروان است، بعدی از تلگرام دانلود می‌شود
+  const queue = [...list];
+  await Promise.all(
+    Array.from({ length: parallel }, async () => {
+      for (let v = queue.shift(); v && !stopping; v = queue.shift()) await transfer(v);
+    }),
+  );
+  if (stopping) return;
   console.log(`\n■ پایان: ${ok} منتقل شد، ${skipped} از قبل منتقل شده بود، ${failed} خطا.${failed ? " برای تلاش دوباره همان دستور را اجرا کنید." : ""}`);
   if (!failed && ok + skipped === list.length) console.log("همه منتقل شد. حالا «pnpm tg logout» را بزنید و از پنل مدیریت ← «ویدیوهای آروان» هر ویدیو را به مبحثش وصل کنید.");
   await finish(client, failed ? 2 : 0);
@@ -406,9 +488,11 @@ const opt = (name: string) => {
   const i = rest.indexOf(`--${name}`);
   return i >= 0 ? rest[i + 1] : undefined;
 };
-const chatArg = rest.find((a, i) => !a.startsWith("--") && !["--limit", "--channel", "--profile"].includes(rest[i - 1]));
+const chatArg = rest.find((a, i) => !a.startsWith("--") && !["--limit", "--parallel", "--channel", "--profile"].includes(rest[i - 1]));
 
-(async () => {
+// TG_NO_CLI: برای تست، بدون اجرای دستور فقط توابع بارگذاری می‌شوند
+export { download, TMP_DIR };
+if (!process.env.TG_NO_CLI) (async () => {
   switch (cmd) {
     case "login":
       return login();
@@ -422,6 +506,7 @@ const chatArg = rest.find((a, i) => !a.startsWith("--") && !["--limit", "--chann
       return runImport(chatArg ?? die("شناسه‌ی گفتگو را بنویسید: pnpm tg import <chat>"), {
         includeOut: flag("all"),
         limit: Number(opt("limit") || 0),
+        parallel: Number(opt("parallel") || 2),
         channel: opt("channel"),
         profile: opt("profile"),
       });
