@@ -76,7 +76,7 @@ export function arvanApi(apiKey: string) {
 
     /** ارسال فایل از offset مشخص؛ در خطا offset واقعی را می‌پرسد و ادامه می‌دهد */
     async upload(uploadUrl: string, readChunk: (pos: number, len: number) => Buffer, size: number, from: number, onProgress?: (sent: number) => void) {
-      const CHUNK = 32 * 1024 * 1024;
+      const CHUNK = 8 * 1024 * 1024; // تکه‌های کوچک: گزارش پیشرفت دقیق‌تر و ارسال دوباره‌ی کمتر هنگام قطعی
       let pos = from;
       let fails = 0;
       while (pos < size) {

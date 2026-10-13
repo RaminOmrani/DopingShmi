@@ -230,18 +230,21 @@ function takeLock() {
 }
 
 /** گزارش پیشرفت: در ترمینال یک خط زنده، در فایل لاگ هر ۳۰ ثانیه یک خط؛ در دیتابیس هر ۱۰ ثانیه */
-function progress(id: string, label: string, total: number) {
-  const t0 = Date.now();
+function progress(id: string, label: string, total: number, start = 0) {
   let lastLog = 0;
   let lastDb = 0;
-  let base = -1;
+  const samples: [number, number][] = [[Date.now(), start]]; // سرعت در ۲۰ ثانیه‌ی اخیر
   return (done: number) => {
     const now = Date.now();
-    if (base < 0) base = done;
+    samples.push([now, done]);
+    while (samples.length > 2 && now - samples[0][0] > 20000) samples.shift();
+    const [t0, d0] = samples[0];
+    const speed = (done - d0) / Math.max(0.5, (now - t0) / 1000);
+    const left = speed > 0 ? (total - done) / speed : 0;
+    const eta = left > 3600 ? `${(left / 3600).toFixed(1)}h` : left > 0 ? `${Math.ceil(left / 60)}m` : "";
     const pct = Math.min(100, Math.floor((done / total) * 100));
-    const speed = (done - base) / Math.max(1, (now - t0) / 1000);
-    const line = `   ${label} ${pct}%  ${mb(done)}/${mb(total)}  ${mb(speed)}/s`;
-    if (TTY) process.stdout.write(`\r${line.padEnd(70)}`);
+    const line = `   ${label} ${pct}%  ${mb(done)}/${mb(total)}  ${mb(speed)}/s${eta ? `  ~${eta}` : ""}`;
+    if (TTY) process.stdout.write(`\r${line.padEnd(78)}`);
     else if (now - lastLog > 30000) {
       console.log(line);
       lastLog = now;
@@ -338,7 +341,8 @@ async function runImport(arg: string, o: { includeOut: boolean; limit: number; c
     const tmp = path.join(TMP_DIR, `${chat.id}-${v.msgId}${path.extname(v.fileName) || ".mp4"}`);
     try {
       await db.videoImport.update({ where: { id: row.id }, data: { status: "DOWNLOADING", progress: 0, error: null, attempts: { increment: 1 } } });
-      await download(client, chat.entity, v, tmp, progress(row.id, "دانلود از تلگرام", v.size));
+      const have = fs.existsSync(tmp) ? fs.statSync(tmp).size : 0;
+      await download(client, chat.entity, v, tmp, progress(row.id, "دانلود از تلگرام", v.size, have));
       if (TTY) process.stdout.write("\n");
 
       let url = row.uploadUrl;
@@ -359,7 +363,7 @@ async function runImport(arg: string, o: { includeOut: boolean; limit: number; c
           },
           v.size,
           from,
-          progress(row.id, "ارسال به آروان", v.size),
+          progress(row.id, "ارسال به آروان", v.size, from),
         );
       } finally {
         fs.closeSync(fd);
