@@ -360,6 +360,23 @@ async function download(client: TelegramClient, entity: Api.TypeEntityLike, v: T
   }
 }
 
+/**
+ * محل ادامه‌ی آپلود نیمه‌کاره. بعد از توقف وسط ارسال، آروان ممکن است چند لحظه آپلود را قفل نگه دارد؛
+ * پس چند بار صبر و دوباره می‌پرسیم و فقط اگر آروان بگوید آپلود دیگر وجود ندارد از صفر شروع می‌کنیم.
+ */
+async function resumeOffset(api: ReturnType<typeof arvanApi>, url: string, tag: string) {
+  for (let i = 1; i <= 8; i++) {
+    try {
+      return await api.offset(url); // null یعنی آپلود در آروان پیدا نشد
+    } catch (e) {
+      console.log(`   ${tag}آروان هنوز آپلود قبلی را آزاد نکرده (${(e as Error).message})؛ ${i}/8، ۱۵ ثانیه دیگر…`);
+      await new Promise((r) => setTimeout(r, 15000));
+    }
+  }
+  console.log(`   ${tag}ادامه‌ی آپلود قبلی ممکن نشد؛ ارسال از ابتدا`);
+  return null;
+}
+
 async function pickChannel(api: ReturnType<typeof arvanApi>, wanted?: string) {
   const list = await api.channels();
   if (wanted) return list.find((c) => c.id === wanted) ?? die(`کانال ${wanted} در آروان پیدا نشد`);
@@ -419,7 +436,7 @@ async function runImport(arg: string, o: { includeOut: boolean; limit: number; p
       else console.log(`   ${tag}دانلود تمام شد؛ ارسال به آروان…`);
 
       let url = row.uploadUrl;
-      let from = url ? await api.offset(url).catch(() => null) : null;
+      let from = url ? await resumeOffset(api, url, tag) : null;
       if (!url || from === null) {
         url = await api.createUpload(channel.id, v.size, v.fileName, v.mime);
         from = 0;
@@ -491,7 +508,7 @@ const opt = (name: string) => {
 const chatArg = rest.find((a, i) => !a.startsWith("--") && !["--limit", "--parallel", "--channel", "--profile"].includes(rest[i - 1]));
 
 // TG_NO_CLI: برای تست، بدون اجرای دستور فقط توابع بارگذاری می‌شوند
-export { download, TMP_DIR };
+export { download, resumeOffset, TMP_DIR };
 if (!process.env.TG_NO_CLI) (async () => {
   switch (cmd) {
     case "login":
