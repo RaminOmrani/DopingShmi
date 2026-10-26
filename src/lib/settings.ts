@@ -74,6 +74,8 @@ export interface PointSettings {
 export interface AccessSettings {
   studentsAllGrades: boolean;
   requireApproval: boolean;
+  /** دانش‌آموزان نام بقیه را در رتبه‌بندی ببینند (خاموش = فقط مدیر نام‌ها را می‌بیند) */
+  showStudentNames: boolean;
 }
 
 export interface Settings {
@@ -124,7 +126,7 @@ export const DEFAULT_SETTINGS: Settings = {
     bingVerification: "",
   },
   sms: { provider: "mock", username: "", password: "", apiKey: "", from: "", usePatterns: true, parentSms: true },
-  arvan: { apiKey: "", secureLink: true, bindIp: false, expireMinutes: 180, watermark: true },
+  arvan: { apiKey: "", secureLink: true, bindIp: false, expireMinutes: 360, watermark: true },
   payment: {
     enabled: false,
     merchantId: "",
@@ -134,7 +136,7 @@ export const DEFAULT_SETTINGS: Settings = {
     cardNote: "مبلغ را به کارت زیر واریز کنید و شماره پیگیری را وارد کنید. پس از تأیید (معمولاً کمتر از چند ساعت)، دسترسی شما فعال و پیامک تأیید ارسال می‌شود.",
   },
   points: { examBase: 20, examBonusMax: 30, videoDone: 10, videoPer5Min: 1, onlinePer10Min: 1, onlineDailyCap: 12, daily: 3, streak7: 25 },
-  access: { studentsAllGrades: true, requireApproval: true },
+  access: { studentsAllGrades: true, requireApproval: true, showStudentNames: false },
 };
 
 type Key = keyof Settings;

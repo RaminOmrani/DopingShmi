@@ -5,7 +5,7 @@ import { adminAction, bool, must, num, str } from "@/lib/action";
 import { getUser, hashPassword, verifyPassword } from "@/lib/auth";
 import { saveSetting, getSetting } from "@/lib/settings";
 import { sendTemplate, smsCredit } from "@/lib/sms";
-import { arvanChannels } from "@/lib/arvan";
+import { arvanChannels, clearPlaybackCache } from "@/lib/arvan";
 import { normalizePhone } from "@/lib/utils";
 
 export const saveContent = adminAction(async (fd) => {
@@ -65,7 +65,8 @@ export const testSms = adminAction(async (fd) => {
 
 export const saveArvan = adminAction(async (fd) => {
   const cur = await getSetting("arvan");
-  await saveSetting("arvan", { apiKey: str(fd, "apiKey") || cur.apiKey, secureLink: bool(fd, "secureLink"), bindIp: bool(fd, "bindIp"), watermark: bool(fd, "watermark"), expireMinutes: Math.max(10, num(fd, "expireMinutes", 180)) });
+  await saveSetting("arvan", { apiKey: str(fd, "apiKey") || cur.apiKey, secureLink: bool(fd, "secureLink"), bindIp: bool(fd, "bindIp"), watermark: bool(fd, "watermark"), expireMinutes: Math.max(60, num(fd, "expireMinutes", 360)) });
+  clearPlaybackCache();
   try {
     const ch = await arvanChannels();
     return { ok: true, message: `اتصال برقرار است · ${ch.length} کانال: ${ch.map((c) => c.title).join("، ")}` };
@@ -102,7 +103,8 @@ export const savePoints = adminAction(async (fd) => {
 });
 
 export const saveAccess = adminAction(async (fd) => {
-  await saveSetting("access", { studentsAllGrades: bool(fd, "studentsAllGrades"), requireApproval: true });
+  await saveSetting("access", { studentsAllGrades: bool(fd, "studentsAllGrades"), requireApproval: true, showStudentNames: bool(fd, "showStudentNames") });
+  revalidatePath("/panel/leaderboard");
   return { ok: true };
 });
 

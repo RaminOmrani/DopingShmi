@@ -6,6 +6,9 @@ import { getSetting } from "@/lib/settings";
 
 type Ctx = { params: Promise<{ id: string }> };
 
+/** fresh=1 (لینک منقضی‌شده در پلیر) برای هر کاربر و ویدیو حداکثر هر ۱۵ ثانیه یک بار */
+const lastFresh = new Map<string, number>();
+
 export const GET = route<Ctx>(async (req, { params }) => {
   const user = await mustUser();
   const { id } = await params;
@@ -24,9 +27,16 @@ export const GET = route<Ctx>(async (req, { params }) => {
     return ok({ ...base, hls: u.includes(".m3u8") ? u : null, mp4: u.includes(".m3u8") ? null : u, poster: video.thumbnail });
   }
   try {
-    const p = await getPlayback(video.arvanVideoId, clientIp(req));
+    const wantFresh = new URL(req.url).searchParams.get("fresh") === "1";
+    const fk = `${user.id}|${id}`;
+    const fresh = wantFresh && Date.now() - (lastFresh.get(fk) ?? 0) > 15_000;
+    if (fresh) {
+      lastFresh.set(fk, Date.now());
+      if (lastFresh.size > 5000) lastFresh.clear();
+    }
+    const p = await getPlayback(video.arvanVideoId, clientIp(req), { fresh });
     if (!p.hls && !p.playerUrl) throw new HttpError(409, "ویدیو هنوز در آروان آماده‌ی پخش نیست");
-    return ok({ ...base, hls: p.hls ?? null, playerUrl: p.hls ? null : p.playerUrl, poster: video.thumbnail || p.thumbnail || null });
+    return ok({ ...base, hls: p.hls ?? null, playerUrl: p.hls ? null : p.playerUrl, poster: video.thumbnail || p.thumbnail || null, expiresAt: p.expiresAt ?? null });
   } catch (e) {
     if (e instanceof HttpError) throw e;
     console.error("arvan", e);

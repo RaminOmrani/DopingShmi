@@ -35,7 +35,7 @@ export default async function Settings() {
         <p className="mb-4 text-xs leading-6 text-white/50">در پنل آروان ← پلتفرم ویدیو، یک کانال بسازید و «لینک امن» (Secure Link) را روشن کنید. کلید API را از «پنل کاربری ← کلیدهای API» بسازید (دسترسی ویدیو). ویدیوها را در کانال آپلود و شناسه‌ی هر ویدیو را در «مباحث و ویدیوها» ثبت کنید.</p>
         <Form action={saveArvan} className="grid gap-3 sm:grid-cols-3">
           <Field label="کلید API آروان" className="sm:col-span-2"><input name="apiKey" className="input" dir="ltr" placeholder={mask(s.arvan.apiKey) || "Apikey xxxxxxxx-xxxx-..."} /></Field>
-          <Field label="اعتبار لینک پخش (دقیقه)"><input name="expireMinutes" defaultValue={s.arvan.expireMinutes} className="input" inputMode="numeric" /></Field>
+          <Field label="اعتبار لینک پخش (دقیقه، حداقل ۶۰؛ پیشنهاد ۳۶۰)"><input name="expireMinutes" defaultValue={s.arvan.expireMinutes} className="input" inputMode="numeric" /></Field>
           <div className="flex flex-wrap gap-4 text-sm sm:col-span-3">
             <label className="flex items-center gap-2"><input type="checkbox" name="secureLink" defaultChecked={s.arvan.secureLink} className="size-4" /> لینک امن (انقضادار)</label>
             <label className="flex items-center gap-2"><input type="checkbox" name="bindIp" defaultChecked={s.arvan.bindIp} className="size-4" /> قفل لینک روی IP کاربر (امن‌تر؛ با اینترنت موبایل ممکن است قطع شود)</label>
@@ -89,6 +89,7 @@ export default async function Settings() {
         <h2 className="mb-4 font-black">دسترسی شاگردان</h2>
         <Form action={saveAccess} className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="studentsAllGrades" defaultChecked={s.access.studentsAllGrades} className="size-4" /> شاگردان تأییدشده به ویدیوهای همه‌ی پایه‌ها دسترسی داشته باشند (خاموش = فقط پایه‌ی خودشان)</label>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="showStudentNames" defaultChecked={s.access.showStudentNames} className="size-4" /> دانش‌آموزان نام یکدیگر را در رتبه‌بندی ببینند (خاموش = فقط مدیر نام‌ها را می‌بیند؛ بقیه «دانش‌آموز» نمایش داده می‌شوند)</label>
           <Submit className="btn-primary btn-sm">ذخیره</Submit>
         </Form>
       </section>
