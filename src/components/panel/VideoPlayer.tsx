@@ -32,6 +32,9 @@ const REFRESH_DELAYS = [0, 3000, 16000];
 const MSG_NET = "اتصال به سرور ویدیو قطع شد. اینترنت خود را بررسی کنید و «تلاش دوباره» را بزنید.";
 const MSG_LINK = "سرور ویدیو فعلاً اجازه‌ی پخش نمی‌دهد. چند لحظه بعد «تلاش دوباره» را بزنید؛ اگر درست نشد به پشتیبانی خبر دهید.";
 const MSG_MEDIA = "پخش این ویدیو در مرورگر شما با مشکل مواجه شد. «تلاش دوباره» را بزنید یا مرورگر دیگری را امتحان کنید.";
+const MSG_SERVER = "سرور ویدیو موقتاً پاسخ نمی‌دهد. چند لحظه بعد «تلاش دوباره» را بزنید.";
+type Cause = "net" | "link" | "media" | "server";
+const MSG: Record<Cause, string> = { net: MSG_NET, link: MSG_LINK, media: MSG_MEDIA, server: MSG_SERVER };
 
 const readPref = () => {
   try {
@@ -61,6 +64,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [overlay, setOverlay] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [stalled, setStalled] = useState(false); // ویدیو منتظر داده است (کندی/قطعی اینترنت)
   const [tapToPlay, setTapToPlay] = useState(false);
   const [engine, setEngine] = useState<Engine | null>(null);
   const [levels, setLevels] = useState<Quality[]>([]);
@@ -73,6 +77,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
   const wantPlayRef = useRef(false); // آیا دانش‌آموز می‌خواهد ویدیو پخش شود
   const qualityRef = useRef(0); // ترجیح ذخیره‌شده‌ی دانش‌آموز
   const ctl = useRef<{ retry: () => void; setQuality: (h: number) => void } | null>(null);
+  const retryBtn = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     qualityRef.current = readPref();
@@ -92,6 +97,62 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
       cancelled = true;
     };
   }, [videoId, reloadKey]);
+
+  // ارسال پیشرفت (پیش از افکت پخش، تا ارسال نهایی هنگام خروج قبل از نابودی پلیر انجام شود)
+  useEffect(() => {
+    const v = ref.current;
+    if (!v || !data || data.playerUrl) return;
+    const send = (force = false) => {
+      // در حین بازیابی یا وقتی رسانه هنوز بارگذاری نشده، موقعیت (صفر موقت) ثبت نشود
+      if (recoveringRef.current || v.readyState === 0) return;
+      const a = acc.current;
+      if (!force && Date.now() - a.sentAt < 15000) return;
+      if (a.delta < 1 && !force) return;
+      const delta = Math.round(a.delta);
+      a.delta = 0;
+      a.sentAt = Date.now();
+      const payload = JSON.stringify({ position: v.currentTime || 0, delta, duration: v.duration || 0 });
+      if (force && navigator.sendBeacon) {
+        navigator.sendBeacon(`/api/videos/${videoId}/progress`, new Blob([payload], { type: "application/json" }));
+        return;
+      }
+      fetch(`/api/videos/${videoId}/progress`, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload })
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.justCompleted) {
+            setDone(true);
+            toast.ok(`آفرین! ویدیو کامل شد و ${faNum(d.bonus)} امتیاز گرفتی 🎉`);
+          }
+        })
+        .catch(() => {});
+    };
+    const onTime = () => {
+      const a = acc.current;
+      const t = v.currentTime;
+      if (a.lastT >= 0 && !v.paused && !v.seeking && !recoveringRef.current) {
+        const d = t - a.lastT;
+        if (d > 0 && d < 2.5) a.delta += d;
+      }
+      a.lastT = t;
+      send();
+    };
+    const onSeek = () => (acc.current.lastT = v.currentTime);
+    const onPause = () => send(true);
+    const onHide = () => document.visibilityState === "hidden" && send(true);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("seeking", onSeek);
+    v.addEventListener("pause", onPause);
+    v.addEventListener("ended", onPause);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      send(true);
+      v.removeEventListener("timeupdate", onTime);
+      v.removeEventListener("seeking", onSeek);
+      v.removeEventListener("pause", onPause);
+      v.removeEventListener("ended", onPause);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [data, videoId]);
 
   // راه‌اندازی پخش و بازیابی خطا
   useEffect(() => {
@@ -114,6 +175,9 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
     let reports = 0;
     let gaveUp = false;
     let ignorePause = false;
+    let cause: Cause = "net"; // علت آخرین مشکل، برای انتخاب پیام
+    let refreshedAt = -1; // موقعیتی که آخرین لینک تازه از آن شروع شد
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
     const loadedAt = Date.now();
     const timers = new Set<ReturnType<typeof setTimeout>>();
     const later = (fn: () => void, ms: number) => {
@@ -148,6 +212,16 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
       anchor = null;
       if (!disposed) setBusy(false);
     };
+    /** fetch با مهلت؛ AbortSignal.timeout در iOS 15 و مرورگرهای قدیمی وجود ندارد */
+    const fetchWithTimeout = async (input: string, ms: number) => {
+      const ac = new AbortController();
+      const tm = setTimeout(() => ac.abort(), ms);
+      try {
+        return await fetch(input, { cache: "no-store", signal: ac.signal });
+      } finally {
+        clearTimeout(tm);
+      }
+    };
     /** بعد از بارگذاری دوباره، اگر دانش‌آموز در حال تماشا بود، پخش ادامه پیدا کند */
     const resumeAfter = () => {
       v.addEventListener(
@@ -173,13 +247,14 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
       }
     };
     /** قطع کامل: پیام با دکمه‌ی «تلاش دوباره»؛ ویدیو متوقف و از تمام‌صفحه خارج می‌شود تا پیام دیده شود */
-    const giveUp = (msg = MSG_NET) => {
+    const giveUp = (msg = MSG[cause]) => {
       if (disposed) return;
       gaveUp = true;
       refreshing = false;
       recoveringRef.current = true; // موقعیت واقعی معلوم نیست؛ پیشرفت ثبت نشود
       if (anchor == null) anchor = pos();
       setBusy(false);
+      setStalled(false);
       setOverlay(msg);
       if (!v.paused) {
         ignorePause = true; // این توقف کار ماست، نه دانش‌آموز
@@ -240,7 +315,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
         errorPenaltyExpireMs: 30000,
         manifestLoadPolicy: policy(15000, 30000, rc(3, 500, 4000), rc(3, 1000, 8000)),
         playlistLoadPolicy: policy(15000, 30000, rc(4, 500, 4000), rc(4, 1000, 8000)),
-        fragLoadPolicy: policy(20000, 120000, rc(6, 1000, 8000), rc(8, 1000, 16000)),
+        fragLoadPolicy: policy(20000, 120000, rc(6, 1000, 8000), rc(8, 1000, 8000)),
       });
       h.on(H.Events.MANIFEST_PARSED, () => {
         syncLevels();
@@ -267,6 +342,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
       const E = Hls.ErrorDetails;
       // لینک منقضی: همان اولین خطا (حتی غیرکشنده) لینک تازه بگیر، وگرنه hls.js همه‌ی کیفیت‌ها را امتحان می‌کند
       if (code && NEW_URL_CODES.has(code)) {
+        cause = "link";
         report("expired-link", { code, detail: d.details, fatal: d.fatal });
         refresh("expired");
         return;
@@ -281,13 +357,31 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
       if (!d.fatal) return;
       report("fatal", { code, detail: d.details, fatal: true });
       if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        cause = code && code >= 500 ? "server" : code && code >= 400 ? "link" : "net";
         if (d.details === E.MANIFEST_LOAD_ERROR || d.details === E.MANIFEST_LOAD_TIMEOUT || d.details === E.MANIFEST_PARSING_ERROR) return refresh("manifest");
-        if (++netTries > 6) return giveUp(MSG_NET);
+        if (++netTries > 6) return giveUp();
         setBusy(true);
         const retry = () => later(() => hls === h && !gaveUp && h.startLoad(pos()), Math.min(1000 * 2 ** netTries, 15000));
         if (navigator.onLine) retry();
         else window.addEventListener("online", retry, { once: true });
       } else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        cause = "media";
+        // این مرورگر قالب ویدیو را با hls.js پخش نمی‌کند (پیش از آماده شدن کیفیت‌ها): پخش داخلی مرورگر را امتحان کن
+        if (!h.levels.length || d.details === E.MANIFEST_INCOMPATIBLE_CODECS_ERROR) {
+          if (data.hls && v.canPlayType("application/vnd.apple.mpegurl")) {
+            const p = pos();
+            hls = null;
+            h.destroy();
+            mode = "native";
+            setEngine("native");
+            setLevels([]);
+            recoveringRef.current = true;
+            loadNative(p);
+            resumeAfter();
+            return;
+          }
+          return giveUp();
+        }
         const now = performance.now();
         mediaErrors = mediaErrors.filter((x) => now - x < 60000);
         mediaErrors.push(now);
@@ -301,7 +395,10 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
         h.recoverMediaError();
         h.startLoad(p); // بعد از خطای کشنده hls.js بارگذاری را متوقف کرده؛ از همین ثانیه ادامه بده
         resumeAfter();
-      } else refresh("other");
+      } else {
+        cause = "media";
+        refresh("other");
+      }
     };
 
     // ─── پخش داخلی مرورگر (آیفون‌های قدیمی و مرورگرهای بدون MSE) ───
@@ -314,6 +411,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
     const onNativeError = () => {
       if (mode === "hls" || refreshing || gaveUp) return;
       report("native-error", { code: v.error?.code, detail: v.error?.message?.slice(0, 200) });
+      cause = v.error?.code === 3 ? "media" : navigator.onLine ? "link" : "net";
       refresh("native");
     };
 
@@ -324,8 +422,8 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
       refreshTimes = refreshTimes.filter((x) => now - x < 120000);
       const attempt = refreshTimes.length;
       if (attempt >= REFRESH_DELAYS.length) {
-        report("refresh-loop", { detail: reason });
-        return giveUp(reason === "expired" || reason === "manifest" ? MSG_LINK : reason === "media" ? MSG_MEDIA : MSG_NET);
+        report("refresh-loop", { detail: `${reason}/${cause}` });
+        return giveUp();
       }
       refreshTimes.push(now);
       refreshing = true;
@@ -336,12 +434,13 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
     };
     const doRefresh = async (reason: string) => {
       try {
-        const r = await fetch(`/api/videos/${videoId}/play?fresh=1`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
+        const r = await fetchWithTimeout(`/api/videos/${videoId}/play?fresh=1`, 15000);
         const d = (await r.json().catch(() => ({}))) as Play & { error?: string };
         if (disposed || gaveUp) return;
         if (!r.ok) {
           refreshing = false;
           if (r.status === 401 || r.status === 403 || r.status === 404) return giveUp(d.error || MSG_LINK);
+          cause = "server";
           return refresh(reason);
         }
         // در مدت گرفتن لینک، نسخه‌ی قبلی ممکن است از بافر جلو رفته باشد
@@ -350,6 +449,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
         url = d.hls || d.mp4 || url;
         setDeadline(d);
         lastRefreshAt = Date.now();
+        refreshedAt = t;
         if (mode === "hls") {
           hls?.destroy();
           hls = createHls(t);
@@ -358,6 +458,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
         resumeAfter();
       } catch {
         refreshing = false;
+        cause = "net";
         if (!disposed && !gaveUp) refresh(reason);
       }
     };
@@ -402,7 +503,33 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
     };
     const onEnded = () => (wantPlayRef.current = false);
     const onTime = () => {
-      if (!recoveringRef.current && v.currentTime > 0) lastGood = v.currentTime;
+      if (recoveringRef.current || v.currentTime <= 0) return;
+      lastGood = v.currentTime;
+      // لینک تازه ۲۰ ثانیه درست پخش شد: تلاش‌های قبلی دیگر به سقف «تلاش دوباره» حساب نشوند
+      if (refreshTimes.length && refreshedAt >= 0 && v.currentTime - refreshedAt > 20) {
+        refreshTimes = [];
+        refreshedAt = -1;
+      }
+    };
+    // ویدیو بیش از ۴ ثانیه منتظر داده ماند: نشان «در حال اتصال دوباره»؛
+    // اگر کیفیت دستی انتخاب شده و ۱۵ ثانیه گیر کرد، برای این جلسه روی خودکار برو
+    const clearStall = () => {
+      clearTimeout(stallTimer);
+      stallTimer = undefined;
+      if (!disposed) setStalled(false);
+    };
+    const onWaiting = () => {
+      if (!wantPlayRef.current || gaveUp) return;
+      clearTimeout(stallTimer);
+      stallTimer = setTimeout(() => {
+        if (disposed || v.paused || gaveUp) return;
+        setStalled(true);
+        stallTimer = setTimeout(() => {
+          if (disposed || !hls || hls.autoLevelEnabled || v.readyState >= 3) return;
+          hls.loadLevel = -1;
+          toast.ok("به‌خاطر کندی اینترنت، کیفیت روی «خودکار» رفت");
+        }, 11000);
+      }, 4000);
     };
     const onSeeking = () => {
       if (!recoveringRef.current) lastGood = v.currentTime; // مقصد جابه‌جایی، حتی اگر هنوز بارگذاری نشده
@@ -414,18 +541,26 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
     v.addEventListener("timeupdate", onTime);
     v.addEventListener("seeking", onSeeking);
     v.addEventListener("error", onNativeError);
+    v.addEventListener("waiting", onWaiting);
+    v.addEventListener("playing", clearStall);
+    v.addEventListener("pause", clearStall);
     window.addEventListener("online", onOnline);
 
     // نگهبان پخش داخلی: اگر با وجود اینترنت ۴۰ ثانیه جلو نرفت، لینک تازه
     let lastT = -1;
+    let lastBuf = 0;
     let stuckSince = 0;
     const watchdog = setInterval(() => {
-      if (mode === "hls" || refreshing || gaveUp || !wantPlayRef.current || v.paused || v.ended || v.seeking || document.hidden || !navigator.onLine) {
+      const nearEnd = v.duration > 0 && v.duration - v.currentTime < 2;
+      if (mode === "hls" || refreshing || gaveUp || !wantPlayRef.current || v.paused || v.ended || v.seeking || nearEnd || document.hidden || !navigator.onLine) {
         stuckSince = 0;
         lastT = v.currentTime;
         return;
       }
-      if (v.currentTime !== lastT) {
+      const buf = v.buffered.length ? v.buffered.end(v.buffered.length - 1) : 0;
+      const arriving = buf > lastBuf + 0.5; // اینترنت کند است ولی داده می‌رسد: لینک سالم است
+      lastBuf = buf;
+      if (v.currentTime !== lastT || arriving) {
         lastT = v.currentTime;
         stuckSince = 0;
       } else if (!stuckSince) stuckSince = Date.now();
@@ -451,6 +586,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
           loadNative(start);
         } else return setLoadErr({ msg: "مرورگر شما از پخش این ویدیو پشتیبانی نمی‌کند", retry: false });
         setEngine(mode);
+        resumeAfter(); // اگر دانش‌آموز پیش از آماده شدن پلیر روی پخش زده بود
       })
       .catch(() => {
         if (disposed) return;
@@ -473,65 +609,17 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
       v.removeEventListener("timeupdate", onTime);
       v.removeEventListener("seeking", onSeeking);
       v.removeEventListener("error", onNativeError);
+      v.removeEventListener("waiting", onWaiting);
+      v.removeEventListener("playing", clearStall);
+      v.removeEventListener("pause", clearStall);
+      clearTimeout(stallTimer);
       window.removeEventListener("online", onOnline);
     };
   }, [data, videoId]);
 
-  // ارسال پیشرفت
   useEffect(() => {
-    const v = ref.current;
-    if (!v || !data || data.playerUrl) return;
-    const send = (force = false) => {
-      // در حین بازیابی یا وقتی رسانه هنوز بارگذاری نشده، موقعیت (صفر موقت) ثبت نشود
-      if (recoveringRef.current || v.readyState === 0) return;
-      const a = acc.current;
-      if (!force && Date.now() - a.sentAt < 15000) return;
-      if (a.delta < 1 && !force) return;
-      const delta = Math.round(a.delta);
-      a.delta = 0;
-      a.sentAt = Date.now();
-      const payload = JSON.stringify({ position: v.currentTime || 0, delta, duration: v.duration || 0 });
-      if (force && navigator.sendBeacon) {
-        navigator.sendBeacon(`/api/videos/${videoId}/progress`, new Blob([payload], { type: "application/json" }));
-        return;
-      }
-      fetch(`/api/videos/${videoId}/progress`, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload })
-        .then((r) => r.json())
-        .then((d) => {
-          if (d.justCompleted) {
-            setDone(true);
-            toast.ok(`آفرین! ویدیو کامل شد و ${faNum(d.bonus)} امتیاز گرفتی 🎉`);
-          }
-        })
-        .catch(() => {});
-    };
-    const onTime = () => {
-      const a = acc.current;
-      const t = v.currentTime;
-      if (a.lastT >= 0 && !v.paused && !v.seeking && !recoveringRef.current) {
-        const d = t - a.lastT;
-        if (d > 0 && d < 2.5) a.delta += d;
-      }
-      a.lastT = t;
-      send();
-    };
-    const onSeek = () => (acc.current.lastT = v.currentTime);
-    const onPause = () => send(true);
-    const onHide = () => document.visibilityState === "hidden" && send(true);
-    v.addEventListener("timeupdate", onTime);
-    v.addEventListener("seeking", onSeek);
-    v.addEventListener("pause", onPause);
-    v.addEventListener("ended", onPause);
-    document.addEventListener("visibilitychange", onHide);
-    return () => {
-      send(true);
-      v.removeEventListener("timeupdate", onTime);
-      v.removeEventListener("seeking", onSeek);
-      v.removeEventListener("pause", onPause);
-      v.removeEventListener("ended", onPause);
-      document.removeEventListener("visibilitychange", onHide);
-    };
-  }, [data, videoId]);
+    if (overlay) retryBtn.current?.focus();
+  }, [overlay]);
 
   // جابه‌جایی واترمارک
   useEffect(() => {
@@ -586,8 +674,11 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
             {data.watermark}
           </span>
         )}
-        {busy && !overlay && (
-          <span role="status" aria-live="polite" className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1 text-xs text-amber">
+        <span role="status" aria-live="polite" className="sr-only">
+          {(busy || stalled) && !overlay ? "در حال اتصال دوباره" : ""}
+        </span>
+        {(busy || stalled) && !overlay && (
+          <span aria-hidden className="pointer-events-none absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-black/70 px-3 py-1 text-xs text-amber">
             <Loader2 className="size-3.5 animate-spin" /> در حال اتصال دوباره…
           </span>
         )}
@@ -610,7 +701,7 @@ export function VideoPlayer({ videoId }: { videoId: string }) {
             <div>
               <AlertTriangle className="mx-auto mb-3 size-10 text-amber" />
               <p className="mx-auto max-w-sm text-sm leading-7 text-white/80">{overlay}</p>
-              <button type="button" onClick={() => ctl.current?.retry()} className="btn-primary btn-sm mt-4">
+              <button ref={retryBtn} type="button" onClick={() => ctl.current?.retry()} className="btn-primary btn-sm mt-4">
                 <RotateCw className="size-4" /> تلاش دوباره
               </button>
             </div>

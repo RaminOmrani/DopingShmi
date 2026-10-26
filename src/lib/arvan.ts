@@ -1,5 +1,5 @@
 import "server-only";
-import { getSetting } from "./settings";
+import { getSetting, type ArvanSettings } from "./settings";
 import { ARVAN_API as API, arvanApi, authHeader } from "./arvan-api";
 
 /**
@@ -29,6 +29,8 @@ const cache = new Map<string, { exp: number; minted: number; secure: boolean; v:
 export function clearPlaybackCache() {
   cache.clear();
 }
+/** درخواست‌های هم‌زمان برای یک ویدیو (مثلاً چند دانش‌آموز بعد از قطعی) فقط یک بار به آروان می‌روند */
+const inflight = new Map<string, Promise<ArvanVideo>>();
 
 export async function arvanRequest(path: string, init: RequestInit = {}) {
   const s = await getSetting("arvan");
@@ -62,6 +64,15 @@ export async function getPlayback(videoId: string, ip?: string, opts: { fresh?: 
     if (opts.fresh && now - hit.minted < 10_000 && hit.exp - now > 60_000) return hit.v;
   }
 
+  const pending = inflight.get(key);
+  if (pending) return pending;
+  const p = mint(s, videoId, key, ttl, ip).finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  return p;
+}
+
+async function mint(s: ArvanSettings, videoId: string, key: string, ttl: number, ip?: string): Promise<ArvanVideo> {
+  const now = Date.now();
   const exp = s.secureLink ? now + ttl * 1000 : now + Math.max(6 * 3600_000, ttl * 1000); // بدون لینک امن، فقط برای کش
   const q = new URLSearchParams();
   if (s.secureLink) {
@@ -81,7 +92,7 @@ export async function getPlayback(videoId: string, ip?: string, opts: { fresh?: 
     thumbnail: d.thumbnail_url,
     expiresAt: s.secureLink ? exp : undefined,
   };
-  if (v.hls || v.playerUrl) cache.set(key, { exp, minted: now, secure: s.secureLink, v }); // ویدیوی هنوز آماده‌نشده کش نشود
+  if (v.hls) cache.set(key, { exp, minted: now, secure: s.secureLink, v }); // ویدیوی هنوز آماده‌نشده کش نشود
   if (cache.size > 2000) cache.clear();
   return v;
 }

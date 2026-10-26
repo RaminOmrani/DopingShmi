@@ -18,10 +18,12 @@ const shortName = (n: string) => {
 
 export default async function Leaderboard({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
   const user = await requireUser();
-  const t = (await searchParams).t ?? "group";
+  const admin = isAdmin(user);
+  const t = (await searchParams).t ?? (admin ? "all" : "group");
   // حریم خصوصی: به‌طور پیش‌فرض دانش‌آموزان نام بقیه را نمی‌بینند (فقط مدیر در پنل مدیریت)
-  const showNames = (await getSetting("access")).showStudentNames || isAdmin(user);
-  const label = (r: Row) => (r.id === user.id ? "شما" : showNames ? shortName(r.name) : t === "all" ? `دانش‌آموز ${groupLabel(r.grade, r.major)}` : "دانش‌آموز");
+  const showNames = (await getSetting("access")).showStudentNames || admin;
+  const label = (r: Row) =>
+    r.id === user.id ? "شما" : showNames ? shortName(r.name) : t === "all" && (r.grade || r.major) ? `دانش‌آموز ${groupLabel(r.grade, r.major)}` : "دانش‌آموز";
   let rows: Row[] = [];
   if (t === "week") {
     const from = addDays(tehranDay(), -6);
