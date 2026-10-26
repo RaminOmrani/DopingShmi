@@ -23,7 +23,7 @@ export interface ArvanVideo {
 }
 
 /** هر ورودی زمان انقضای واقعی لینک خودش را نگه می‌دارد (نه بر اساس تنظیم فعلی) */
-const cache = new Map<string, { exp: number; secure: boolean; v: ArvanVideo }>();
+const cache = new Map<string, { exp: number; minted: number; secure: boolean; v: ArvanVideo }>();
 
 /** بعد از تغییر تنظیمات آروان، لینک‌های ساخته‌شده با تنظیمات قبلی دیگر داده نشوند */
 export function clearPlaybackCache() {
@@ -51,14 +51,18 @@ export async function arvanRequest(path: string, init: RequestInit = {}) {
  */
 export async function getPlayback(videoId: string, ip?: string, opts: { fresh?: boolean } = {}): Promise<ArvanVideo> {
   const s = await getSetting("arvan");
-  const ttl = Math.max(10, s.expireMinutes) * 60;
+  const ttl = Math.max(60, s.expireMinutes) * 60;
   const key = `${videoId}|${s.bindIp ? ip : ""}`;
   const hit = cache.get(key);
-  const minLeft = Math.min(ttl * 1000 * 0.9, Math.max((ttl * 1000) / 2, 2 * 3600_000));
-  if (!opts.fresh && hit && hit.secure === s.secureLink && hit.exp - Date.now() >= minLeft) return hit.v;
-
   const now = Date.now();
-  const exp = s.secureLink ? now + ttl * 1000 : now + 6 * 3600_000; // بدون لینک امن، فقط برای کش
+  const minLeft = Math.min(ttl * 1000 * 0.9, Math.max((ttl * 1000) / 2, 2 * 3600_000));
+  if (hit && hit.secure === s.secureLink) {
+    if (!opts.fresh && hit.exp - now >= minLeft) return hit.v;
+    // درخواست لینک تازه از چند دانش‌آموز هم‌زمان (مثلاً هنگام قطعی): حداکثر یک لینک جدید در هر ۱۰ ثانیه برای هر ویدیو
+    if (opts.fresh && now - hit.minted < 10_000 && hit.exp - now > 60_000) return hit.v;
+  }
+
+  const exp = s.secureLink ? now + ttl * 1000 : now + Math.max(6 * 3600_000, ttl * 1000); // بدون لینک امن، فقط برای کش
   const q = new URLSearchParams();
   if (s.secureLink) {
     q.set("secure_expire_time", String(Math.floor(exp / 1000)));
@@ -77,7 +81,7 @@ export async function getPlayback(videoId: string, ip?: string, opts: { fresh?: 
     thumbnail: d.thumbnail_url,
     expiresAt: s.secureLink ? exp : undefined,
   };
-  cache.set(key, { exp, secure: s.secureLink, v });
+  if (v.hls || v.playerUrl) cache.set(key, { exp, minted: now, secure: s.secureLink, v }); // ویدیوی هنوز آماده‌نشده کش نشود
   if (cache.size > 2000) cache.clear();
   return v;
 }

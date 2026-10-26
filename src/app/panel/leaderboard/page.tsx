@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Crown, Medal } from "lucide-react";
-import { requireUser } from "@/lib/auth";
+import { isAdmin, requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { groupLabel } from "@/lib/constants";
@@ -8,6 +8,8 @@ import { LevelBadge } from "@/components/panel/LevelBadge";
 import { addDays, fmtInt, faNum, tehranDay } from "@/lib/utils";
 
 export const metadata = { title: "رتبه‌بندی" };
+
+type Row = { id: string; name: string; grade: string | null; major: string | null; points: number; total: number };
 
 const shortName = (n: string) => {
   const [a, ...rest] = n.trim().split(/\s+/);
@@ -18,21 +20,21 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
   const user = await requireUser();
   const t = (await searchParams).t ?? "group";
   // حریم خصوصی: به‌طور پیش‌فرض دانش‌آموزان نام بقیه را نمی‌بینند (فقط مدیر در پنل مدیریت)
-  const { showStudentNames } = await getSetting("access");
-  const label = (r: { id: string; name: string }) => (r.id === user.id ? "شما" : showStudentNames ? shortName(r.name) : "دانش‌آموز");
-  let rows: { id: string; name: string; points: number; total: number }[] = [];
+  const showNames = (await getSetting("access")).showStudentNames || isAdmin(user);
+  const label = (r: Row) => (r.id === user.id ? "شما" : showNames ? shortName(r.name) : t === "all" ? `دانش‌آموز ${groupLabel(r.grade, r.major)}` : "دانش‌آموز");
+  let rows: Row[] = [];
   if (t === "week") {
     const from = addDays(tehranDay(), -6);
     const g = await db.activity.groupBy({ by: ["userId"], where: { day: { gte: from }, user: { role: "USER", blocked: false, grade: user.grade, major: user.major } }, _sum: { points: true }, orderBy: { _sum: { points: "desc" } }, take: 50 });
-    const us = await db.user.findMany({ where: { id: { in: g.map((x) => x.userId) } }, select: { id: true, name: true, points: true } });
+    const us = await db.user.findMany({ where: { id: { in: g.map((x) => x.userId) } }, select: { id: true, name: true, points: true, grade: true, major: true } });
     const m = new Map(us.map((u) => [u.id, u]));
-    rows = g.map((x) => ({ id: x.userId, name: m.get(x.userId)?.name ?? "", points: x._sum.points ?? 0, total: m.get(x.userId)?.points ?? 0 }));
+    rows = g.map((x) => ({ id: x.userId, name: m.get(x.userId)?.name ?? "", grade: m.get(x.userId)?.grade ?? null, major: m.get(x.userId)?.major ?? null, points: x._sum.points ?? 0, total: m.get(x.userId)?.points ?? 0 }));
   } else {
     const us = await db.user.findMany({
       where: { role: "USER", blocked: false, ...(t === "group" ? { grade: user.grade, major: user.major } : {}) },
       orderBy: { points: "desc" },
       take: 50,
-      select: { id: true, name: true, points: true },
+      select: { id: true, name: true, points: true, grade: true, major: true },
     });
     rows = us.map((u) => ({ ...u, total: u.points }));
   }
@@ -56,7 +58,7 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
           {[podium[1], podium[0], podium[2]].map((p, i) => {
             const place = [2, 1, 3][i];
             return (
-              <div key={p.id} className={`card relative p-4 text-center ${place === 1 ? "glow-border pb-8 pt-8" : ""}`}>
+              <div key={showNames || p.id === user.id ? p.id : `p${place}`} className={`card relative p-4 text-center ${place === 1 ? "glow-border pb-8 pt-8" : ""}`}>
                 {place === 1 ? <Crown className="mx-auto mb-2 size-8 text-amber" /> : <Medal className={`mx-auto mb-2 size-6 ${place === 2 ? "text-slate-300" : "text-orange-400"}`} />}
                 <div className="mb-2 flex justify-center"><LevelBadge points={p.total} size={place === 1 ? "md" : "sm"} /></div>
                 <p className="truncate text-sm font-black">{label(p)}</p>
@@ -69,10 +71,10 @@ export default async function Leaderboard({ searchParams }: { searchParams: Prom
 
       <div className="card divide-y divide-white/5 overflow-hidden">
         {rows.map((r, i) => (
-          <div key={r.id} className={`flex items-center gap-3 px-4 py-3 ${r.id === user.id ? "bg-gradient-to-l from-cyan/15 to-violet/10" : ""}`}>
+          <div key={showNames || r.id === user.id ? r.id : `r${i}`} className={`flex items-center gap-3 px-4 py-3 ${r.id === user.id ? "bg-gradient-to-l from-cyan/15 to-violet/10" : ""}`}>
             <span className="w-7 text-center text-sm font-black text-white/60">{faNum(i + 1)}</span>
             <LevelBadge points={r.total} size="sm" />
-            <span className={`flex-1 truncate text-sm font-bold ${r.id !== user.id && !showStudentNames ? "text-white/55" : ""}`}>{r.id === user.id ? `${user.name} (شما)` : label(r)}</span>
+            <span className={`flex-1 truncate text-sm font-bold ${r.id !== user.id && !showNames ? "text-white/55" : ""}`}>{r.id === user.id ? `${user.name} (شما)` : label(r)}</span>
             <span className="text-sm font-black text-gradient">{fmtInt(r.points)}</span>
           </div>
         ))}

@@ -36,7 +36,7 @@ export const GET = route<Ctx>(async (req, { params }) => {
     }
     const p = await getPlayback(video.arvanVideoId, clientIp(req), { fresh });
     if (!p.hls && !p.playerUrl) throw new HttpError(409, "ویدیو هنوز در آروان آماده‌ی پخش نیست");
-    return ok({ ...base, hls: p.hls ?? null, playerUrl: p.hls ? null : p.playerUrl, poster: video.thumbnail || p.thumbnail || null, expiresAt: p.expiresAt ?? null });
+    return ok({ ...base, hls: p.hls ?? null, playerUrl: p.hls ? null : p.playerUrl, poster: video.thumbnail || p.thumbnail || null, expiresAt: p.expiresAt ?? null, serverNow: Date.now() });
   } catch (e) {
     if (e instanceof HttpError) throw e;
     console.error("arvan", e);
