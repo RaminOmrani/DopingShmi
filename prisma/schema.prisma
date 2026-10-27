@@ -401,3 +401,30 @@ model VideoImport {
 
   @@index([status])
 }
+
+/// رخدادهای پخش ویدیو برای عیب‌یابی از راه دور (پنل مدیریت ← گزارش پخش) — ۳۰ روز نگه‌داری
+model PlaybackEvent {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  userId       String?
+  videoId      String?
+  sessionId    String // هر بار باز شدن پلیر
+  kind         String // frag-stall | giveup | session-end | abnormal-exit | ...
+  engine       String? // hls | native | file
+  build        String? // نسخه‌ی کد (commit)
+  position     Int?
+  sinceLoadSec Int?
+  code         Int?
+  fatal        Boolean?
+  detail       String?
+  ctx          Json? // وضعیت دستگاه/شبکه/پلیر هنگام رخداد
+  ua           String?
+  ip           String? // فقط /24 (برای تشخیص VPN خارجی)
+  queued       Boolean  @default(false) // در حالت آفلاین صف شده و بعداً رسیده
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+  @@index([videoId, createdAt])
+  @@index([userId, createdAt])
+  @@index([sessionId])
+}
