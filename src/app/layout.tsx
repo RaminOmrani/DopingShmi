@@ -59,7 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased">
         <div className="aurora" aria-hidden />
-        <div className="grain" aria-hidden />
+        {/* لایه‌ی grain فقط در صفحه‌های سایت ((site)/layout.tsx)؛ روی پلیر ویدیوی پنل لایه‌ی mix-blend نمی‌نشیند */}
         {children}
         <Toaster />
       </body>

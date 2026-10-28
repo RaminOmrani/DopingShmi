@@ -49,6 +49,8 @@ body {
   min-height: 100dvh;
 }
 ::selection { background: rgba(139, 92, 246, 0.45); color: white; }
+/* پنل: «کشیدن برای تازه‌سازی» غیرفعال تا کشیدن انگشت روی ویدیو صفحه را دوباره بارگذاری نکند (data-panel در layout پنل) */
+html:has([data-panel]), html:has([data-panel]) body { overscroll-behavior-y: none; }
 
 /* اسکرول‌بار */
 * { scrollbar-width: thin; scrollbar-color: rgba(139,92,246,.45) transparent; }

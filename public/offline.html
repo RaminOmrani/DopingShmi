@@ -1,0 +1,83 @@
+<!doctype html>
+<!--
+  صفحه‌ی آفلاین سرویس‌ورکر (public/sw.js). عمداً بدون Next و بدون فایل JS/CSS بیرونی:
+  - از کش می‌آید و هیچ chunk ای لازم ندارد (وگرنه ChunkLoadError و پیام اشتباه «نسخه‌ی تازه‌ی سایت» در error.tsx)
+  - چون hydrate نمی‌شود، آدرس نوار مرورگر همان صفحه‌ی درخواستی می‌ماند و «تلاش دوباره»/وصل شدن اینترنت همان را باز می‌کند
+-->
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#03040b" />
+    <meta name="robots" content="noindex" />
+    <title>آفلاین | دوپینگ شیمی</title>
+    <script>
+      try {
+        if (localStorage.getItem("ds-theme") === "light") {
+          document.documentElement.dataset.theme = "light";
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f5f7fc");
+        }
+      } catch (e) {}
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #03040b;
+        --fg: #e7ecff;
+        --muted: rgba(231, 236, 255, 0.6);
+        --card: rgba(255, 255, 255, 0.04);
+        --border: rgba(255, 255, 255, 0.08);
+        --accent: #22d3ee;
+      }
+      :root[data-theme="light"] {
+        color-scheme: light;
+        --bg: #f5f7fc;
+        --fg: #1e293b;
+        --muted: rgba(15, 23, 42, 0.6);
+        --card: rgba(255, 255, 255, 0.88);
+        --border: rgba(15, 23, 42, 0.08);
+        --accent: #0e7490;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100dvh; background: var(--bg); color: var(--fg); }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+        font-family: "Vazirmatn Variable", Vazirmatn, Tahoma, system-ui, sans-serif;
+        text-align: center;
+      }
+      main { width: 100%; max-width: 360px; padding: 32px; border-radius: 24px; border: 1px solid var(--border); background: var(--card); }
+      img { display: block; width: 56px; height: 56px; margin: 0 auto 16px; }
+      h1 { margin: 0 0 8px; font-size: 20px; font-weight: 900; }
+      p { margin: 0 0 24px; font-size: 14px; line-height: 1.9; color: var(--muted); }
+      button {
+        display: block;
+        width: 100%;
+        border: 0;
+        border-radius: 16px;
+        padding: 12px 20px;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(110deg, #22d3ee, #8b5cf6 55%, #e879f9);
+        cursor: pointer;
+      }
+      button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/logo.svg" alt="" />
+      <h1>اتصال اینترنت برقرار نیست</h1>
+      <p>به محض وصل شدن اینترنت، همین صفحه خودکار دوباره باز می‌شود.</p>
+      <button type="button" onclick="location.reload()">تلاش دوباره</button>
+    </main>
+    <script>
+      addEventListener("online", function () {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

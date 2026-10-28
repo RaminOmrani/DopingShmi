@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getAccess, canWatch } from "@/lib/access";
 import { VideoPlayer } from "@/components/panel/VideoPlayer";
+import { InAppHint } from "@/components/panel/InAppHint";
 import { BuyButton } from "@/components/BuyButton";
 import { faNum, fmtClock, fmtToman } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ export default async function Watch({ params }: { params: Promise<{ id: string }
       <Link href={`/panel/videos/topic/${video.topicId}`} className="mb-4 inline-flex items-center gap-1 text-sm text-white/50 hover:text-cyan"><ArrowRight className="size-4" /> {video.topic.title}</Link>
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <div>
+          {/* مرورگر داخلی تلگرام/ایتا/...: پیشنهاد باز کردن در Chrome یا Safari */}
+          <InAppHint />
           {open ? (
             <VideoPlayer videoId={video.id} />
           ) : (

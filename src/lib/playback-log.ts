@@ -9,6 +9,8 @@ const QUEUE_KEY = "ds-tlm-q";
 const QUEUE_MAX = 20;
 /** نشانگر «در حال تماشا»؛ برای تشخیص بسته شدن ناگهانی صفحه (کرش/بسته شدن اپ) */
 export const WATCH_KEY = "ds-watch";
+/** پیشوند نام Web Lock پلیرِ زنده (+ sessionId)؛ قفل با بسته شدن/کرش صفحه آزاد می‌شود */
+export const WATCH_LOCK = "ds-watch:";
 
 export interface PlaybackEvent {
   kind: string; // ≤ 40
@@ -25,6 +27,8 @@ export interface PlaybackEvent {
   queued?: boolean;
   /** زمان رخداد به ساعت دستگاه (میلی‌ثانیه) */
   at?: number;
+  /** شناسه‌ی یکتای رخداد (همان در ارسال دوباره‌ی صف)؛ سرور تکراری را یک بار ذخیره می‌کند */
+  eid?: string;
 }
 
 export interface WatchMarker {
@@ -48,10 +52,17 @@ export const newSessionId = () => {
   }
 };
 
-/** اپ نصب‌شده روی صفحه‌ی اصلی (PWA) */
+let standalone: boolean | undefined;
+/**
+ * اپ نصب‌شده روی صفحه‌ی اصلی (PWA). display-mode «fullscreen» حساب نمی‌شود: در تمام‌صفحه‌ی ویدیو
+ * زبانه‌ی معمولی کروم هم fullscreen است (و اپ نصب‌شده standalone نیست)؛ پس بیرون از تمام‌صفحه یک بار سنجیده و نگه داشته می‌شود.
+ */
 export const isStandalone = () => {
+  if (standalone !== undefined) return standalone;
   try {
-    return (navigator as Navigator & { standalone?: boolean }).standalone === true || matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: fullscreen)").matches;
+    const s = (navigator as Navigator & { standalone?: boolean }).standalone === true || matchMedia("(display-mode: standalone)").matches || matchMedia("(display-mode: minimal-ui)").matches;
+    if (!document.fullscreenElement) standalone = s;
+    return s;
   } catch {
     return false;
   }
@@ -115,7 +126,8 @@ const post = (events: PlaybackEvent[]) =>
  */
 export function logPlayback(ev: PlaybackEvent, opts: { beacon?: boolean } = {}) {
   try {
-    const e: PlaybackEvent = { ...ev, at: ev.at ?? Date.now() };
+    // eid پیش از اولین ارسال: اگر پاسخ گم شد و از صف دوباره رفت، سرور دو بار ذخیره‌اش نمی‌کند
+    const e: PlaybackEvent = { ...ev, at: ev.at ?? Date.now(), eid: ev.eid ?? newSessionId() };
     if (opts.beacon && navigator.sendBeacon) {
       try {
         if (navigator.sendBeacon(ENDPOINT, new Blob([JSON.stringify({ events: [e] })], { type: "application/json" }))) return;

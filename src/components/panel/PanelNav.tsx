@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, PlayCircle, FileCheck2, Trophy, UserRound, LogOut, Home, ShieldCheck } from "lucide-react";
 import { ThemeToggle } from "@/components/Theme";
+import { logout } from "@/lib/logout";
 
 const items = [
   { href: "/panel", label: "داشبورد", icon: LayoutDashboard },
@@ -13,6 +14,8 @@ const items = [
 ];
 
 const active = (path: string, href: string) => (href === "/panel" ? path === "/panel" : path.startsWith(href));
+/** صفحه‌ی تماشای یک ویدیو (نه فهرست ویدیوهای مبحث) */
+export const WATCH_RE = /^\/panel\/videos\/(?!topic\/)[^/]+$/;
 
 export function SideNav({ admin }: { admin: boolean }) {
   const path = usePathname();
@@ -37,7 +40,7 @@ export function SideNav({ admin }: { admin: boolean }) {
         <ThemeToggle withLabel className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-white/55 hover:bg-white/5" />
         {admin && <Link href="/admin" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-amber hover:bg-white/5"><ShieldCheck className="size-5" /> پنل مدیریت</Link>}
         <Link href="/" className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-white/55 hover:bg-white/5"><Home className="size-5" /> صفحه اصلی سایت</Link>
-        <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; }} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-rose/80 hover:bg-white/5">
+        <button onClick={logout} className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold text-rose/80 hover:bg-white/5">
           <LogOut className="size-5" /> خروج
         </button>
       </div>
@@ -47,8 +50,10 @@ export function SideNav({ admin }: { admin: boolean }) {
 
 export function BottomNav() {
   const path = usePathname();
+  // صفحه‌ی تماشا در حالت افقی: منو روی دکمه‌های پلیر ویدیو نمی‌افتد
+  const watch = WATCH_RE.test(path);
   return (
-    <nav className="glass !bg-ink/85 fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-3xl px-1 py-1.5 pb-[max(.375rem,env(safe-area-inset-bottom))] lg:hidden">
+    <nav className={`glass !bg-ink/85 fixed inset-x-3 bottom-3 z-40 grid grid-cols-5 rounded-3xl px-1 py-1.5 pb-[max(.375rem,env(safe-area-inset-bottom))] lg:hidden ${watch ? "landscape:hidden" : ""}`}>
       {items.map((i) => {
         const on = active(path, i.href);
         return (

@@ -7,6 +7,8 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const [user, site] = await Promise.all([getUser(), getSetting("site")]);
   return (
     <>
+      {/* بافت دانه‌دانه فقط در صفحه‌های معرفی سایت (نه پنل و مدیریت که ویدیو پخش می‌شود) */}
+      <div className="grain" aria-hidden />
       <Header user={user ? { name: user.name, admin: isAdmin(user) } : null} />
       {children}
       <Footer site={site} />
