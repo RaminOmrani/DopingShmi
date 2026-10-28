@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { ArticleForm } from "@/components/admin/ArticleForm";
@@ -11,6 +12,7 @@ import { faNum } from "@/lib/utils";
 export const metadata = { title: "ویرایش مقاله" };
 
 export default async function ArticleAdmin({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const { id } = await params;
   const a = await db.article.findUnique({ where: { id } });
   if (!a) notFound();

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { groupStats } from "@/lib/stats";
 import { PageHead, Kpi } from "@/components/admin/ui";
 import { ExamAvgBars, DailyBars } from "@/components/charts/Charts";
@@ -9,6 +10,7 @@ import { faNum, fmtDate, fmtDayShort, fmtDuration, fmtInt, fmtPct } from "@/lib/
 export const metadata = { title: "آمار گروهی" };
 
 export default async function Stats({ searchParams }: { searchParams: Promise<{ grade?: string; major?: string; group?: string }> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const sp = await searchParams;
   const [s, groups] = await Promise.all([groupStats({ grade: sp.grade, major: sp.major, classGroupId: sp.group }), db.classGroup.findMany({ orderBy: { order: "asc" } })]);
   return (

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Gift, AlertTriangle } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { TopicForm } from "@/components/admin/TopicForm";
@@ -13,6 +14,7 @@ type V = { id: string; title: string; description: string | null; arvanVideoId: 
 const dur = (s: number) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "");
 
 export default async function TopicAdmin({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const { id } = await params;
   const t = await db.topic.findUnique({ where: { id }, include: { videos: { orderBy: { order: "asc" }, include: { _count: { select: { progress: true } } } } } });
   if (!t) notFound();

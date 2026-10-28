@@ -2,11 +2,13 @@ import { getSettings } from "@/lib/settings";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { saveSms, testSms, saveArvan, savePayment, saveCards, savePoints, saveAccess, changePassword } from "./actions";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata = { title: "تنظیمات" };
 const mask = (s: string) => (s ? `••••${s.slice(-4)}` : "");
 
 export default async function Settings() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const s = await getSettings();
   return (
     <div className="mx-auto max-w-5xl space-y-5">

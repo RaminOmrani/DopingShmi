@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Search, UserPlus } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import type { Prisma } from "@/generated/prisma/client";
 import { PageHead } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
@@ -12,6 +13,7 @@ import { faNum, fmtDate, fmtInt, toEnDigits } from "@/lib/utils";
 export const metadata = { title: "دانش‌آموزان" };
 
 export default async function Users({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? 1));
   const q = toEnDigits(sp.q ?? "").trim();

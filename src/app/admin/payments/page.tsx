@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead, Kpi } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { approveCard, rejectCard } from "./actions";
@@ -9,6 +10,7 @@ export const metadata = { title: "پرداخت‌ها" };
 const ST: Record<string, [string, string]> = { PAID: ["موفق", "text-lime"], PENDING: ["نیمه‌کاره", "text-amber"], REVIEW: ["در انتظار تأیید", "text-cyan"], FAILED: ["ناموفق", "text-rose"] };
 
 export default async function Payments({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const status = (await searchParams).status;
   const [review, payments, total, month] = await Promise.all([
     db.payment.findMany({ where: { status: "REVIEW" }, orderBy: { createdAt: "asc" }, include: { user: { select: { id: true, name: true, phone: true } } } }),

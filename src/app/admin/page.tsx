@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Users, GraduationCap, UserCheck, Activity, Wallet, PlayCircle, ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead, Kpi } from "@/components/admin/ui";
 import { DailyBars } from "@/components/charts/Charts";
 import { addDays, faNum, fmtDate, fmtDayShort, fmtDuration, fmtInt, fmtToman, tehranDay } from "@/lib/utils";
@@ -8,6 +9,7 @@ import { groupLabel } from "@/lib/constants";
 import { ApproveButtons } from "./users/ApproveButtons";
 
 export default async function AdminHome() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const today = tehranDay();
   const from = addDays(today, -29);
   const monthStart = new Date(Date.now() - 30 * 86400000);

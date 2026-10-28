@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { saveRank, deleteRank } from "../photos/actions";
@@ -8,6 +9,7 @@ export const metadata = { title: "رتبه‌های برتر" };
 type R = { id: string; name: string; rank: number; year: string; field: string | null; photo: string | null; note: string | null; order: number };
 
 export default async function Ranks() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const ranks = await db.topRank.findMany({ orderBy: [{ order: "asc" }, { rank: "asc" }] });
   return (
     <div className="mx-auto max-w-6xl">

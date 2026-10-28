@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
@@ -55,13 +56,14 @@ async function sessionUserId(): Promise<string | null> {
   }
 }
 
-export async function getUser() {
+/** کاربر واردشده؛ در هر رندر یک بار از پایگاه داده (layout و خود صفحه هر دو بررسی می‌کنند) */
+export const getUser = cache(async () => {
   const id = await sessionUserId();
   if (!id) return null;
   const user = await db.user.findUnique({ where: { id }, include: { classGroup: true } });
   if (!user || user.blocked) return null;
   return user;
-}
+});
 export type SessionUser = NonNullable<Awaited<ReturnType<typeof getUser>>>;
 
 export const isAdmin = (u: { role: string } | null | undefined) => u?.role === "ADMIN" || u?.role === "STAFF";

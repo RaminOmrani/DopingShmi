@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead } from "@/components/admin/ui";
 import { TopicForm } from "@/components/admin/TopicForm";
 import { gradeLabel } from "@/lib/constants";
@@ -9,6 +10,7 @@ import { Gift, EyeOff, ChevronLeft } from "lucide-react";
 export const metadata = { title: "مباحث و ویدیوها" };
 
 export default async function Topics() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const topics = await db.topic.findMany({ orderBy: [{ grade: "asc" }, { order: "asc" }], include: { videos: { select: { id: true, isFree: true, arvanVideoId: true } }, _count: { select: { purchases: true } } } });
   const grades = ["G10", "G11", "G12", "ALL"];
   return (

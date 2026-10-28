@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ExternalLink, FileCheck2, EyeOff } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead } from "@/components/admin/ui";
 import { ExamForm } from "@/components/admin/ExamForm";
 import { groupLabel } from "@/lib/constants";
@@ -9,6 +10,7 @@ import { faNum, fmtDate } from "@/lib/utils";
 export const metadata = { title: "آزمون‌ها" };
 
 export default async function AdminExams() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const [exams, groups] = await Promise.all([
     db.exam.findMany({ orderBy: { createdAt: "desc" }, include: { _count: { select: { questions: true, results: { where: { status: "SUBMITTED" } } } } } }),
     db.classGroup.findMany({ orderBy: { order: "asc" } }),

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { ensureTemplates, smsCredit } from "@/lib/sms";
 import { SMS_TEMPLATES } from "@/lib/sms/templates";
 import { getSetting } from "@/lib/settings";
@@ -13,6 +14,7 @@ import { faNum, fmtDate } from "@/lib/utils";
 export const metadata = { title: "پیامک" };
 
 export default async function Sms({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const tab = (await searchParams).tab ?? "send";
   await ensureTemplates();
   const [cfg, templates, groups, campaigns, logs] = await Promise.all([

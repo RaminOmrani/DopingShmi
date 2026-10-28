@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarPlus, Users } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { saveGroup, deleteGroup, createEvent } from "./actions";
@@ -12,6 +13,7 @@ export const metadata = { title: "کلاس‌ها" };
 const KIND_FA: Record<string, string> = { FIXED: "فیکس شد", CANCELLED: "لغو شد", RESCHEDULED: "جابه‌جا شد" };
 
 export default async function Classes() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const [groups, students, privateEvents] = await Promise.all([
     db.classGroup.findMany({ orderBy: { order: "asc" }, include: { _count: { select: { users: { where: { classStatus: "APPROVED" } } } }, events: { orderBy: { createdAt: "desc" }, take: 3 } } }),
     db.user.findMany({ where: { classStatus: "APPROVED", role: "USER" }, orderBy: [{ classGroupId: { sort: "asc", nulls: "first" } }, { name: "asc" }], select: { id: true, name: true, phone: true } }),

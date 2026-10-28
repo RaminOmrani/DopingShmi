@@ -3,10 +3,12 @@ import { getSetting } from "@/lib/settings";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { saveContent } from "../settings/actions";
+import { requireAdmin } from "@/lib/auth";
 
 export const metadata = { title: "متن‌های سایت" };
 
 export default async function Content() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const s = await getSetting("site");
   return (
     <div className="mx-auto max-w-5xl">

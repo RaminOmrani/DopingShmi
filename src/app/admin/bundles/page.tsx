@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { saveBundle, deleteBundle } from "../topics/actions";
@@ -11,6 +12,7 @@ type Topic = { id: string; title: string; grade: string };
 type B = { id: string; title: string; description: string | null; price: number; durationDays: number | null; active: boolean; order: number; topics: { id: string }[] };
 
 export default async function Bundles() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const [bundles, topics] = await Promise.all([
     db.bundle.findMany({ orderBy: { order: "asc" }, include: { topics: { select: { id: true } }, _count: { select: { purchases: true } } } }),
     db.topic.findMany({ orderBy: [{ grade: "asc" }, { order: "asc" }], select: { id: true, title: true, grade: true } }),

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Film, CheckCircle2, AlertTriangle, Loader2, Download, Upload } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { arvanClient } from "@/lib/arvan";
 import type { ArvanListVideo } from "@/lib/arvan-api";
 import { PageHead, Field } from "@/components/admin/ui";
@@ -24,6 +25,7 @@ const STATUS: Record<string, { t: string; c: string }> = {
 const gb = (n: number) => `${faNum((n / 1024 ** 3).toFixed(1))} گیگ`;
 
 export default async function ArvanVideos() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const [imports, topics, linked] = await Promise.all([
     db.videoImport.findMany({ orderBy: { createdAt: "asc" } }),
     db.topic.findMany({ orderBy: [{ grade: "asc" }, { order: "asc" }], select: { id: true, title: true, grade: true } }),

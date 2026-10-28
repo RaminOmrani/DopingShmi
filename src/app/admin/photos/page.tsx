@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { PhotoUploader } from "@/components/admin/PhotoUploader";
@@ -9,6 +10,7 @@ export const metadata = { title: "عکس‌ها" };
 const SECTIONS: Record<string, string> = { CONFERENCE: "همایش", GALLERY: "گالری", TEACHER: "عکس استاد" };
 
 export default async function Photos({ searchParams }: { searchParams: Promise<{ s?: string }> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const s = (await searchParams).s ?? "";
   const photos = await db.photo.findMany({ where: s ? { section: s } : {}, orderBy: [{ section: "asc" }, { order: "asc" }] });
   return (

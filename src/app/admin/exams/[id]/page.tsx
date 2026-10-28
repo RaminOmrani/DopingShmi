@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { ExamForm } from "@/components/admin/ExamForm";
@@ -15,6 +16,7 @@ import { faNum, fmtDate, fmtPct } from "@/lib/utils";
 type Q = { id: string; order: number; text: string; image: string | null; options: unknown; correct: number; explanation: string | null };
 
 export default async function ExamAdmin({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ tab?: string }> }) {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const { id } = await params;
   const tab = (await searchParams).tab ?? "results";
   const exam = await db.exam.findUnique({ where: { id }, include: { questions: { orderBy: { order: "asc" } } } });

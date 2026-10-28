@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requireAdmin } from "@/lib/auth";
 import { PageHead } from "@/components/admin/ui";
 import { ArticleForm } from "@/components/admin/ArticleForm";
 import { faNum, fmtDate } from "@/lib/utils";
@@ -8,6 +9,7 @@ import { EyeOff, ChevronLeft } from "lucide-react";
 export const metadata = { title: "مقالات" };
 
 export default async function Articles() {
+  await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const list = await db.article.findMany({ orderBy: [{ published: "asc" }, { createdAt: "desc" }], select: { id: true, title: true, slug: true, published: true, views: true, publishedAt: true, category: true } });
   return (
     <div className="mx-auto max-w-5xl">

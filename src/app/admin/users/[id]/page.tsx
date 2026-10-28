@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { db } from "@/lib/db";
-import { getUser } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { userStats } from "@/lib/stats";
 import { PageHead, Kpi, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
@@ -15,8 +15,8 @@ import { CLASS_STATUS_LABEL, GRADES, MAJORS, gradeLabel } from "@/lib/constants"
 import { faNum, fmtDate, fmtDayShort, fmtDuration, fmtInt, fmtPct, fmtToman } from "@/lib/utils";
 
 export default async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
+  const me = await requireAdmin(); // بررسی خود صفحه: layout جلوی رندر صفحه در ناوبری RSC را نمی‌گیرد
   const { id } = await params;
-  const me = await getUser();
   const u = await db.user.findUnique({ where: { id }, include: { classGroup: true, purchases: { include: { topic: true, bundle: true }, orderBy: { createdAt: "desc" } } } });
   if (!u) notFound();
   const [s, groups, topics, bundles] = await Promise.all([
