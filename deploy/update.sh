@@ -28,4 +28,4 @@ nice -n 19 pnpm build
 remove_temp_swap
 pm2 reload doping || pm2 start deploy/ecosystem.config.cjs
 pm2 save
-echo "✔ به‌روز شد"
+echo "✔ به‌روز شد: $(git log -1 --oneline)"

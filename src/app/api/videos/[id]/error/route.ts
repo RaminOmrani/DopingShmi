@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { body, mustUser, ok, route } from "@/lib/api";
+import { admitEvents, storePlaybackEvents } from "@/lib/playback-store";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** گزارش خطاهای پخش از پلیر (برای عیب‌یابی در لاگ سرور: pm2 logs doping) — هر کاربر حداکثر ۳۰ گزارش در ساعت */
-const quota = new Map<string, { n: number; since: number }>();
-
+/**
+ * مسیر قدیمی گزارش خطای پلیر؛ برای صفحه‌هایی که هنوز با نسخه‌ی قبلی کد باز مانده‌اند.
+ * نسخه‌ی جدید به /api/playback-log می‌فرستد. گزارش با sessionId=legacy در «گزارش پخش ویدیو» ذخیره
+ * و در لاگ سرور (pm2 logs doping) هم نوشته می‌شود؛ سهمیه با مسیر جدید مشترک است.
+ */
 export const POST = route<Ctx>(async (req, { params }) => {
   const user = await mustUser();
   const { id } = await params;
@@ -22,12 +25,29 @@ export const POST = route<Ctx>(async (req, { params }) => {
       recovered: z.boolean().optional(),
     }),
   );
-  const now = Date.now();
-  const q = quota.get(user.id);
-  if (!q || now - q.since > 3600_000) quota.set(user.id, { n: 1, since: now });
-  else if (++q.n > 30) return ok();
-  if (quota.size > 5000) quota.clear();
+  const kind = b.kind.toLowerCase().replace(/[^a-z0-9-]/g, "-") || "legacy";
+  const { admitted } = admitEvents(user.id, [{ kind }]);
+  if (!admitted.length) return ok(); // کلاینت قدیمی پاسخ را نمی‌خواند
   const ua = (req.headers.get("user-agent") || "").slice(0, 160);
   console.warn(`[video-error] ${JSON.stringify({ user: user.id, video: id, ...b, ua })}`);
+  await storePlaybackEvents(
+    user.id,
+    req,
+    [
+      {
+        kind,
+        sessionId: "legacy",
+        videoId: id.slice(0, 40),
+        engine: b.engine?.slice(0, 10),
+        position: b.position,
+        sinceLoadSec: b.sinceLoadSec,
+        code: b.code,
+        fatal: b.fatal,
+        detail: b.detail,
+        ctx: b.recovered === undefined ? undefined : { recovered: b.recovered },
+      },
+    ],
+    { log: false },
+  );
   return ok();
 });

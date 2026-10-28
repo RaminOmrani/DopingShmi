@@ -2,9 +2,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Clapperboard, Users, CalendarClock, BarChart3, PlayCircle, Package, FileCheck2, Images, Medal, FileText, MessageSquareText, Newspaper, CreditCard, Settings, Home, LogOut,
+  LayoutDashboard, Clapperboard, Activity, Users, CalendarClock, BarChart3, PlayCircle, Package, FileCheck2, Images, Medal, FileText, MessageSquareText, Newspaper, CreditCard, Settings, Home, LogOut,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/Theme";
+import { logout } from "@/lib/logout";
 
 const items = [
   { href: "/admin", label: "داشبورد", icon: LayoutDashboard },
@@ -13,6 +14,7 @@ const items = [
   { href: "/admin/stats", label: "آمار گروهی", icon: BarChart3 },
   { href: "/admin/topics", label: "مباحث و ویدیوها", icon: PlayCircle },
   { href: "/admin/arvan-videos", label: "ویدیوهای آروان", icon: Clapperboard },
+  { href: "/admin/playback", label: "گزارش پخش ویدیو", icon: Activity },
   { href: "/admin/bundles", label: "بسته‌های فروش", icon: Package },
   { href: "/admin/exams", label: "آزمون‌ها", icon: FileCheck2 },
   { href: "/admin/photos", label: "عکس‌ها و همایش‌ها", icon: Images },
@@ -49,7 +51,7 @@ export function AdminNav({ pending, payReview = 0 }: { pending: number; payRevie
         <div className="mt-auto grid gap-0.5 pt-4">
           <ThemeToggle withLabel className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-white/55 hover:bg-white/5" />
           <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-white/55 hover:bg-white/5"><Home className="size-[18px]" /> مشاهده سایت</Link>
-          <button onClick={async () => { await fetch("/api/auth/logout", { method: "POST" }); location.href = "/"; }} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-rose/80 hover:bg-white/5"><LogOut className="size-[18px]" /> خروج</button>
+          <button onClick={logout} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-rose/80 hover:bg-white/5"><LogOut className="size-[18px]" /> خروج</button>
         </div>
       </aside>
       <nav className="glass no-scrollbar sticky top-0 z-40 flex gap-1 overflow-x-auto px-2 py-2 lg:hidden">

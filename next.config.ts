@@ -1,7 +1,19 @@
 import type { NextConfig } from "next";
+import { execSync } from "node:child_process";
+
+/** شناسه‌ی کوتاه commit هنگام build؛ در گزارش‌های پخش ویدیو می‌آید تا معلوم شود کدام نسخه روی گوشی دانش‌آموز است */
+function buildSha() {
+  if (process.env.NEXT_PUBLIC_BUILD_SHA) return process.env.NEXT_PUBLIC_BUILD_SHA;
+  try {
+    return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim() || "dev";
+  } catch {
+    return "dev";
+  }
+}
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: { NEXT_PUBLIC_BUILD_SHA: buildSha() },
   serverExternalPackages: ["sharp", "exceljs", "pg"],
   experimental: { serverActions: { bodySizeLimit: "30mb" } },
   async headers() {

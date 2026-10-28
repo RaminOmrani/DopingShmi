@@ -18,4 +18,6 @@ export async function hourly() {
     await sendTemplate("sub_expiring", p.user.phone, { name: p.user.name, item, days }, { userId: p.userId }).catch(() => {});
     await db.purchase.update({ where: { id: p.id }, data: { remindedAt: new Date() } });
   }
+  // گزارش‌های پخش ویدیو فقط ۳۰ روز نگه داشته می‌شوند
+  await db.playbackEvent.deleteMany({ where: { createdAt: { lt: new Date(Date.now() - 30 * 86400000) } } });
 }
