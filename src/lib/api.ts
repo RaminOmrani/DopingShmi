@@ -9,8 +9,22 @@ export class HttpError extends Error {
   }
 }
 
-export const ok = (data: unknown = { ok: true }, init?: ResponseInit) => NextResponse.json(data, init);
-export const fail = (status: number, error: string) => NextResponse.json({ error }, { status });
+/**
+ * پاسخ‌های API مخصوص هر کاربرند (لینک امن ویدیو، اطلاعات حساب)؛
+ * نه CDN آروان و نه service worker نباید آن‌ها را کش کنند.
+ * هدرهای فرستاده‌شده‌ی صدا زننده بر این پیش‌فرض‌ها مقدم‌اند.
+ */
+function noStore(init?: ResponseInit): ResponseInit {
+  const headers = new Headers(init?.headers);
+  if (!headers.has("Cache-Control")) headers.set("Cache-Control", "private, no-store, max-age=0");
+  const vary = headers.get("Vary");
+  if (!vary) headers.set("Vary", "Cookie");
+  else if (!/(^|,)\s*(cookie|\*)\s*(,|$)/i.test(vary)) headers.set("Vary", `${vary}, Cookie`);
+  return { ...init, headers };
+}
+
+export const ok = (data: unknown = { ok: true }, init?: ResponseInit) => NextResponse.json(data, noStore(init));
+export const fail = (status: number, error: string, init?: ResponseInit) => NextResponse.json({ error }, noStore({ ...init, status }));
 
 type Handler<C> = (req: Request, ctx: C) => Promise<Response>;
 

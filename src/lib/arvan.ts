@@ -32,7 +32,8 @@ export function clearPlaybackCache() {
 /** درخواست‌های هم‌زمان برای یک ویدیو (مثلاً چند دانش‌آموز بعد از قطعی) فقط یک بار به آروان می‌روند */
 const inflight = new Map<string, Promise<ArvanVideo>>();
 
-export async function arvanRequest(path: string, init: RequestInit = {}) {
+/** درخواست به API آروان؛ clock = ساعت سرور آروان (هدر Date) و ساعت ما در همان لحظه، برای سنجش اختلاف ساعت */
+async function arvanFetch(path: string, init: RequestInit = {}) {
   const s = await getSetting("arvan");
   if (!s.apiKey) throw new Error("کلید API آروان در تنظیمات ثبت نشده است");
   const res = await fetch(`${API}${path}`, {
@@ -41,9 +42,59 @@ export async function arvanRequest(path: string, init: RequestInit = {}) {
     signal: AbortSignal.timeout(15000),
     cache: "no-store",
   });
+  const arvanNow = Date.parse(res.headers.get("date") || "");
+  const clock = Number.isFinite(arvanNow) ? { arvan: arvanNow, local: Date.now() } : undefined;
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.message || `خطای آروان (${res.status})`);
-  return data;
+  return { data, clock };
+}
+
+export async function arvanRequest(path: string, init: RequestInit = {}) {
+  return (await arvanFetch(path, init)).data;
+}
+
+// ─── عیب‌یابی عمر لینک امن (فقط لاگ؛ رفتار را تغییر نمی‌دهد) ───
+
+const WARN_EVERY = 10 * 60_000;
+const warnedAt = { skew: 0, expiry: 0 };
+function warnSometimes(kind: keyof typeof warnedAt, msg: string) {
+  if (Date.now() - warnedAt[kind] < WARN_EVERY) return;
+  warnedAt[kind] = Date.now();
+  console.warn(msg);
+}
+
+/**
+ * زمان انقضای امضاشده داخل لینک HLS (مثلاً …/<hash>/<unix-seconds>/…) — فقط وقتی دقیقاً یک بخش ۱۰ رقمی
+ * از مسیر یا پارامترها در بازه‌ی معقولِ اطراف انقضای درخواستی پیدا شود؛ وگرنه undefined.
+ */
+export function signedExpirySec(url: string, requestedSec: number): number | undefined {
+  let u: URL;
+  try {
+    u = new URL(url);
+  } catch {
+    return undefined;
+  }
+  const nowSec = Date.now() / 1000;
+  const parts = [...u.pathname.split("/"), ...u.searchParams.values()];
+  const near = parts
+    .filter((p) => /^\d{10}$/.test(p))
+    .map(Number)
+    .filter((n) => n > nowSec - 300 && n < Math.max(requestedSec, nowSec) + 7 * 86400); // زمان‌های گذشته (مثل تاریخ آپلود) کنار گذاشته می‌شوند
+  return near.length === 1 ? near[0] : undefined;
+}
+
+/** ساعت سرور با آروان اختلاف دارد؟ (لینک امن با ساعت سرور ساخته می‌شود؛ اختلاف زیاد = انقضای زودهنگام) */
+function checkLinkTiming(clock: { arvan: number; local: number } | undefined, hls: string | undefined, requestedMs: number | undefined) {
+  if (clock) {
+    const skew = Math.round((clock.arvan - clock.local) / 1000);
+    if (Math.abs(skew) > 60) warnSometimes("skew", `[arvan] clock skew ${skew}s (arvan minus server; check: timedatectl)`);
+  }
+  if (!hls || !requestedMs) return;
+  const requested = Math.floor(requestedMs / 1000);
+  const signed = signedExpirySec(hls, requested);
+  if (signed !== undefined && Math.abs(signed - requested) > 300) {
+    warnSometimes("expiry", `[arvan] signed expiry differs by ${signed - requested}s (requested ${new Date(requested * 1000).toISOString()}, in link ${new Date(signed * 1000).toISOString()})`);
+  }
 }
 
 /**
@@ -79,7 +130,7 @@ async function mint(s: ArvanSettings, videoId: string, key: string, ttl: number,
     q.set("secure_expire_time", String(Math.floor(exp / 1000)));
     if (s.bindIp && ip) q.set("secure_ip", ip);
   }
-  const r = await arvanRequest(`/videos/${encodeURIComponent(videoId)}${q.size ? `?${q}` : ""}`);
+  const { data: r, clock } = await arvanFetch(`/videos/${encodeURIComponent(videoId)}${q.size ? `?${q}` : ""}`);
   const d = r?.data ?? r;
   const v: ArvanVideo = {
     id: d.id,
@@ -92,6 +143,7 @@ async function mint(s: ArvanSettings, videoId: string, key: string, ttl: number,
     thumbnail: d.thumbnail_url,
     expiresAt: s.secureLink ? exp : undefined,
   };
+  checkLinkTiming(clock, v.hls, v.expiresAt);
   if (v.hls) cache.set(key, { exp, minted: now, secure: s.secureLink, v }); // ویدیوی هنوز آماده‌نشده کش نشود
   if (cache.size > 2000) cache.clear();
   return v;

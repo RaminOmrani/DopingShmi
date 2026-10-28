@@ -38,13 +38,24 @@ export async function heartbeat(userId: string, lastSeenAt: Date | null) {
   });
   await db.user.update({ where: { id: userId }, data: { lastSeenAt: now } });
 
-  await award(userId, "DAILY", day, p.daily);
+  // امتیازهای امروزِ قبلاً ثبت‌شده با یک کوئری؛ award() فقط برای موارد جدید (بدون INSERT تکراریِ ناموفق در هر ضربان)
+  const onlineRefs: string[] = [];
   const blocks = Math.floor(act.onlineSec / 600);
-  for (let b = 1; b <= blocks && b * p.onlinePer10Min <= p.onlineDailyCap; b++) {
-    await award(userId, "ONLINE", `${day}:${b}`, p.onlinePer10Min);
+  for (let b = 1; b <= blocks && b * p.onlinePer10Min <= p.onlineDailyCap; b++) onlineRefs.push(`${day}:${b}`);
+  const done = await db.pointLog.findMany({
+    where: { userId, reason: { in: ["DAILY", "ONLINE", "STREAK"] }, refId: { in: [day, ...onlineRefs] } },
+    select: { reason: true, refId: true },
+  });
+  const have = new Set(done.map((r) => `${r.reason}|${r.refId}`));
+
+  if (!have.has(`DAILY|${day}`)) await award(userId, "DAILY", day, p.daily);
+  for (const ref of onlineRefs) {
+    if (!have.has(`ONLINE|${ref}`)) await award(userId, "ONLINE", ref, p.onlinePer10Min);
   }
-  const streak = await streakOf(userId);
-  if (streak > 0 && streak % 7 === 0) await award(userId, "STREAK", day, p.streak7);
+  if (!have.has(`STREAK|${day}`)) {
+    const streak = await streakOf(userId);
+    if (streak > 0 && streak % 7 === 0) await award(userId, "STREAK", day, p.streak7);
+  }
 }
 
 /** تعداد روزهای پیاپی فعال تا امروز */

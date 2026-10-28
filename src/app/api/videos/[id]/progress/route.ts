@@ -41,7 +41,13 @@ export const POST = route<Ctx>(async (req, { params }) => {
   }
   const p = await getSetting("points");
   const blocks = Math.floor(Math.min(watched, duration || watched) / 300);
-  for (let k = 1; k <= blocks; k++) await award(user.id, "VIDEO_TIME", `${id}:${k}`, p.videoPer5Min);
+  if (blocks > 0 && p.videoPer5Min) {
+    // امتیازهای قبلاً ثبت‌شده با یک کوئری؛ وگرنه هر ۱۵ ثانیه ده‌ها INSERT تکراری (و خطای لاگ Postgres)
+    const refs = Array.from({ length: blocks }, (_, i) => `${id}:${i + 1}`);
+    const done = await db.pointLog.findMany({ where: { userId: user.id, reason: "VIDEO_TIME", refId: { in: refs } }, select: { refId: true } });
+    const have = new Set(done.map((r) => r.refId));
+    for (const ref of refs) if (!have.has(ref)) await award(user.id, "VIDEO_TIME", ref, p.videoPer5Min);
+  }
   let justCompleted = false;
   if (completed && !prev?.completed) justCompleted = await award(user.id, "VIDEO_DONE", id, p.videoDone);
   return ok({ ok: true, completed, justCompleted, bonus: justCompleted ? p.videoDone : 0 });
