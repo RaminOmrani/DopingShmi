@@ -1,0 +1,17 @@
+# generated test video (gen-vod.sh), ~66 MB
+vod/
+vod.tmp.*/
+# runtime state: pid files, server logs, minted JWTs (ctl.sh / setup.mjs)
+.run/
+# scenario output (result-*.json, console logs, screenshots)
+results/
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+*.log
+*.out
+*.jwt
+*.pid
+# Playwright test-runner default output, in case it is ever used
+test-results/
+playwright-report/

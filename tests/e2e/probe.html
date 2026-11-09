@@ -1,0 +1,21 @@
+<!doctype html><html><body><video id="v" muted playsinline controls width="640"></video>
+<script src="/hls.js"></script>
+<script>
+// plain hls.js (the app's own copy) against the mock CDN, without the app: http://127.0.0.1:3600/probe.html?level=0&seek=90&ns=ns01
+// read window.LOG from Playwright / DevTools. Useful to tell hls.js behaviour apart from VideoPlayer behaviour.
+const qp0 = new URLSearchParams(location.search);
+window.LOG = [];
+const t0 = performance.now();
+const log = (...a) => { window.LOG.push(((performance.now() - t0) / 1000).toFixed(2) + "s " + a.join(" ")); };
+const v = document.getElementById("v");
+v.addEventListener("error", () => log("VIDEO-ERROR", v.error && v.error.code, v.error && v.error.message));
+const hls = new Hls({ maxBufferLength: 60, maxMaxBufferLength: 120, capLevelToPlayerSize: true });
+window.hls = hls;
+hls.on(Hls.Events.ERROR, (e, d) => log("HLS-ERROR", d.type, d.details, "fatal=" + d.fatal, d.frag ? "sn=" + d.frag.sn + " lvl=" + d.frag.level : "", d.error ? String(d.error.message).slice(0, 120) : "", d.errorAction ? "action=" + d.errorAction.action + " flags=" + d.errorAction.flags : ""));
+hls.on(Hls.Events.FRAG_BUFFERED, (e, d) => d.frag.sn >= 23 && d.frag.sn <= 27 && log("BUFFERED sn=" + d.frag.sn + " lvl=" + d.frag.level));
+hls.attachMedia(v);
+hls.loadSource(location.origin + "/t/" + Date.now() + (qp0.get("ns") ? "/n/" + qp0.get("ns") : "") + "/master.m3u8");
+const qp = new URLSearchParams(location.search);
+hls.on(Hls.Events.MANIFEST_PARSED, () => { if (qp.get("level")) hls.currentLevel = Number(qp.get("level")); if (qp.get("seek")) v.currentTime = Number(qp.get("seek")); v.play(); });
+setInterval(() => log("tick t=" + v.currentTime.toFixed(2) + " paused=" + v.paused + " rs=" + v.readyState), 2000);
+</script></body></html>

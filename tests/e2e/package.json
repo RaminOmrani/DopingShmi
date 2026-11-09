@@ -1,0 +1,17 @@
+{
+  "name": "doping-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "E2E playback harness for the Doping Shimi video player (Playwright + mock HLS CDN + mock Arvan API). See README.md.",
+  "scripts": {
+    "setup": "node setup.mjs",
+    "gen-vod": "./gen-vod.sh",
+    "up": "./ctl.sh up",
+    "down": "./ctl.sh all-stop",
+    "status": "./ctl.sh status",
+    "test": "node run.mjs quick"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

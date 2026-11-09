@@ -19,6 +19,7 @@
     "tg": "tsx scripts/tg.ts",
     "db:studio": "prisma studio",
     "icons": "tsx scripts/make-icons.ts",
+    "e2e": "node tests/e2e/run.mjs",
     "postinstall": "prisma generate"
   },
   "pnpm": {

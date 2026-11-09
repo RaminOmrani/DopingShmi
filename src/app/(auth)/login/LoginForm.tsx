@@ -16,6 +16,17 @@ async function post(url: string, data: unknown) {
 type Mode = "login" | "signup" | "forgot" | "otp";
 const TITLES: Record<Mode, string> = { login: "ورود", signup: "ثبت‌نام", forgot: "بازیابی رمز عبور", otp: "ورود با کد پیامکی" };
 
+/** فقط مسیری از همین سایت؛ «//دامنه»، «/\دامنه» یا نویسه‌های پنهان (tab) به سایت دیگری می‌برند (open redirect) */
+function sameSitePath(next: string | null) {
+  if (!next?.startsWith("/")) return null;
+  try {
+    const u = new URL(next, location.origin);
+    return u.origin === location.origin ? u.pathname + u.search + u.hash : null;
+  } catch {
+    return null;
+  }
+}
+
 export function LoginForm() {
   const params = useSearchParams();
   const nextParam = params.get("next");
@@ -53,7 +64,8 @@ export function LoginForm() {
   };
 
   const go = (next: string) => {
-    location.href = nextParam && next !== "/register" && nextParam.startsWith("/") ? nextParam : next;
+    const target = sameSitePath(nextParam);
+    location.href = target && next !== "/register" ? target : next;
   };
 
   const run = async (fn: () => Promise<void>) => {
