@@ -284,7 +284,9 @@ interactively) → `pnpm tg chats` → `bash deploy/tg-import.sh <chat> --stream
 - **Bug (verified with pnpm 10): `pnpm db:seed -- --demo` does not create demo data** — pnpm appends extra args to the
   last command of the `&&` chain (`seed-articles.ts`). Correct: `pnpm exec tsx prisma/seed.ts --demo && pnpm db:seed-articles`.
   (The header comment in `prisma/seed.ts` still shows the wrong form.)
-- `prisma/seed-articles.ts`: 2 draft articles once (guard `Setting seed:articles`); runs on every update, no-op after the first.
+- `prisma/seed-articles.ts`: draft articles once per marker (v1: 2 drafts, guard `Setting seed:articles`; v2: 2 SEO drafts,
+  guard `Setting seed:articles:v2`, skipped if the slug exists); runs on every update, no-op once both markers exist. Drafts
+  stay unpublished until the owner publishes them in Admin → مقالات.
 - `prisma/data-fixes.ts`: runs on every update; must stay idempotent. Currently rewrites «لیسانس مهندسی شیمی» →
   «کارشناسی ارشد مهندسی شیمی» in `Setting site` (the teacher's degree). Put future one-off data migrations here.
 

@@ -13,10 +13,14 @@ Related: [AGENTS.md](../AGENTS.md) · [VIDEO.md](VIDEO.md) · [OPERATIONS.md §1
 | Type check | `pnpm typecheck` (`tsc --noEmit`) | whole repo except `node_modules` and `tests/e2e` |
 | Production build | `pnpm build` (`prisma generate && next build`) | compile, prerender (needs a reachable, pushed local DB) |
 | E2E playback harness | `pnpm e2e <scenario|group>` (`node tests/e2e/run.mjs`) | real production build + local DB + mock Arvan API/CDN, Playwright Chromium with phone emulation |
+| Chemistry/content unit tests | `pnpm test:chem` (node:test via tsx, no framework) | `src/lib/chem` engine, Chem tokenizer, route registry, chapter/quiz/tool/formula content validators and render tests (132 tests at 1405/08/25) |
+| SEO check | `pnpm seo:check http://127.0.0.1:3341` against a local `pnpm exec next start -p 3341` | every sitemap URL (or `--planned` / `--paths`): status, canonical, title/description, H1, OG/Twitter, JSON-LD `@id`s, noindex, Persian letters, internal links ([ARCHITECTURE §14](ARCHITECTURE.md#14-seo)) |
 
-There is **no CI** (`.github/` doesn't exist), no unit-test framework, and no lint step (Next 16 removed `next lint`; there
+There is **no CI** (`.github/` doesn't exist), no unit-test framework beyond node:test, and no lint step (Next 16 removed `next lint`; there
 is no ESLint config). The baseline for any change is `pnpm typecheck` + `pnpm build`; for anything touching the player,
-telemetry, the panel shell, the service worker or `/api/videos/*`, also run E2E.
+telemetry, the panel shell, the service worker or `/api/videos/*`, also run E2E. For any public page or content change, also
+run `pnpm test:chem` and `pnpm seo:check` (above). Note: the E2E `admin` scenario needs `abnormal-exit` rows from the last 24 h,
+so run `crash` (or `pwa-relaunch`) before it on a fresh DB, or its `kindFilter` check fails.
 
 Fresh clone: run `pnpm exec next typegen` (or one `pnpm build`) before `pnpm typecheck` — `next-env.d.ts` and
 `.next/types` are generated and gitignored.

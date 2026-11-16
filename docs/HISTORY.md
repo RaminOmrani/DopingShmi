@@ -1,6 +1,6 @@
 # History, decisions and unverified assumptions
 
-Snapshot 2026-11-08 (1405/8/17). Repo `RaminOmrani/DopingShmi`, single branch `claude/dazzling-meitner-g7mbwp`, HEAD
+Snapshot 2026-11-08 (1405/8/17), plus the 2026-11-16 SEO entry. Repo `RaminOmrani/DopingShmi`, single branch `claude/dazzling-meitner-g7mbwp`, HEAD
 `da72570`, 26 commits (2026-09-27 → 2026-10-28). All commits are authored "Ramin Omrani" with Claude co-author trailers
 (AI-written). The first 7 subjects are Persian, the rest English. Five commits share the timestamp 2026-10-28 02:20
 (committed/rebased as one batch). Dates below are UTC with the Persian date in brackets; Tehran is UTC+3:30.
@@ -89,6 +89,21 @@ stuttered forever; (5) zero telemetry.
   the production server; playwright pinned to 1.63.0; root `.gitignore` ignores every `.env*` except `.env.example`.
 - Security: fixed the login `?next=` open redirect (`sameSitePath()` in `src/app/(auth)/login/LoginForm.tsx`).
 
+### 2026-11-16 [1405/8/25] — SEO build (uncommitted at the time of writing)
+- Plan: one target query per URL, 26 new pages in two waves, honest bylines, no programmatic pages (ARCHITECTURE §14).
+- Technical fixes: no root canonical (it leaked to /gallery, /login and 404s), full OG/Twitter per page (`pageMeta`),
+  self-hosted Vazirmatn with metric-adjusted fallbacks (CLS ≈ 0), `(site)` layout no longer reads cookies, so public pages
+  are static/ISR (login state via GET `/api/me`), deterministic sitemap lastmod, noindex on auth/panel/admin/offline,
+  `/og.jpg`, `print:` styles, motion removed from public pages (except BuyButton), article view counter that keeps `updatedAt`.
+- New pages (all `live` after a two-pass chemistry review and `pnpm seo:check` with 0 errors): 10 chapter hubs, quiz hub +
+  10 quizzes, 4 tools (`src/lib/chem` engine), `/formul-shimi`. Rewritten: home, grade pages, /shimi-konkur, /tadris-shimi,
+  /javad-partovi (with `#content-policy`). `syllabus.ts` aligned with the 1403 printing (10th ch.1 «کیهان زادگاه عناصر»).
+- New contract: `site-routes.ts`, `page-meta.ts`, `Chem.tsx`, `EduChrome.tsx`, `scripts/seo-check.ts`, `pnpm test:chem`
+  (132 tests). Two more draft articles (`seed:articles:v2`), `docs/CONTENT-BRIEFS.md` for the teacher.
+- Verified locally only: build, seo:check, Playwright checks (quiz grading, header login state, panel/admin, 360 px),
+  Lighthouse mobile (SEO/a11y/best practices 100; performance 77 home, 92–98 others), E2E quick + shell/api/admin.
+  Not verified: real Google indexing, real phones, production data (topic titles, teacher photo).
+
 ### Outside git (owner)
 BBR enabled (`/etc/sysctl.d/99-bbr.conf`); Arvan Growth plan, channel «doping shimi»; GSC verified + sitemap; 53 videos
 imported then Telegram logout. **Unknown whether the owner has run update.sh since da72570.**
@@ -125,6 +140,10 @@ imported then Telegram logout. **Unknown whether the owner has run update.sh sin
 | 26 | In-app messenger browsers get a hint banner only | a page can't force the system browser | blocking playback |
 | 27 | Verify with a local E2E harness with mocks; never touch production | production/server are off-limits to the AI | testing on the live site |
 | 28 | One free session per topic; default topic price 390,000 toman (seed) | sales funnel | — |
+| 29 | SEO: don't target «شیمی» itself; chapter/quiz/tool long-tail + teacher brand; 26 hand-written pages, no programmatic pages | mixed intent and strong incumbents on the head term; scaled-content risk | per-element/compound pages, glossary pages, city doorways |
+| 30 | Bylines say «دوپینگ شیمی» until the teacher has read a page (`teacherReviewed`); «نکته استاد» only with his own text | honesty (E-E-A-T); pages were AI-drafted and chemistry-reviewed, not teacher-reviewed | crediting the teacher by default |
+| 31 | No FAQPage/HowTo/Course markup for rich results (FAQs visible only) | Google retired/restricted those rich results | markup for snippets |
+| 32 | Non-live planned pages render 200 with noindex (not 404) and are never linked | content can ship before review without being indexed or linked | 404 until live |
 
 ## 3. Unverified assumptions (say so when relevant)
 

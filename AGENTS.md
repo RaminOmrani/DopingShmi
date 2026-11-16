@@ -84,6 +84,7 @@ checked against commit `da72570` plus the E2E harness in `tests/e2e/` on 2026-11
 - [docs/TESTING.md](docs/TESTING.md): typecheck, build, the E2E harness, and what is verified vs not (no real devices yet).
 - [docs/HISTORY.md](docs/HISTORY.md): changelog with commits and dates, decision log, unverified assumptions, README drift.
 - [docs/TODO.md](docs/TODO.md): open items (Persian; the owner's own list).
+- [docs/CONTENT-BRIEFS.md](docs/CONTENT-BRIEFS.md): Persian briefs for the teacher (per-chapter checks, «نکته استاد» prompts, sign-off table).
 - [tests/e2e/README.md](tests/e2e/README.md): full reference for the E2E harness.
 - [README.md](README.md): owner-facing Persian overview. Parts are stale (see HISTORY.md §4).
 
@@ -95,12 +96,16 @@ pnpm exec next typegen      # fresh clone only (next-env.d.ts and .next/types ar
 pnpm typecheck              # tsc --noEmit
 pnpm build                  # needs a reachable local Postgres with the schema pushed
 pnpm e2e quick              # if you touched the player, telemetry, /api/videos, the panel shell or the SW
+pnpm test:chem              # chemistry engine + chapter/quiz/tool/formula content validators
+pnpm exec next start -p 3341 & pnpm seo:check http://127.0.0.1:3341   # any public page change (stop the server by PGID)
 ```
 The E2E setup (mock Arvan API and CDN, Playwright) is in [docs/TESTING.md](docs/TESTING.md). Keep `"tests/e2e"` in the
 `tsconfig.json` `exclude`: its generated `.ts` video segments would break typecheck. Follow the conventions in
 ARCHITECTURE.md §20: Persian UI and comments, `server-only` libs, `route()` handlers with zod, `adminAction` server actions.
+Public pages: `pageMeta()` + `eduGraph()`, formulas only through `<Chem>/<Eq>/<ChemText>`, cross-page links through `RouteLink`,
+exact `TEACHER_CREDENTIAL`, and bump `updated` in `SEO_ROUTES` when a page's text changes (ARCHITECTURE.md §14).
 
-## Current status (2026-11-08)
+## Current status (2026-11-08; SEO line updated 2026-11-16)
 
 - **Video saga:** after reports of "black screen / stops after 2–3 minutes / kicks students out", the player was
   rewritten and hardened across 9 commits (`62136f9` → `da72570`). The work added a hung-download watchdog, native HLS
@@ -110,7 +115,12 @@ ARCHITECTURE.md §20: Persian UI and comments, `server-only` libs, `route()` han
 - SMS is still on the `mock` provider until the owner enters the melipayamak key. In production, OTP codes are then only logged.
 - Payments are card-to-card with admin approval. Zarinpal comes after «اینماد».
 - 53 lesson videos (~38 GB) are in Arvan (imported from Telegram on 1405/7/21) but are not yet attached to topics.
-- SEO pages, articles and JSON-LD are done. GSC is verified. The off-site checklist is in TODO.md.
+- **SEO build (2026-11-16, uncommitted until the owner asks):** 26 new pages (10 chapter hubs, quiz hub + 10 quizzes, 4
+  chemistry tools, `/formul-shimi`) plus rewrites of home, grade pages, /shimi-konkur, /tadris-shimi, /javad-partovi and the
+  technical fixes (canonical leak, OG, fonts, static public pages). All 26 are `live` in `src/lib/site-routes.ts` after a
+  chemistry review and `pnpm seo:check` (0 errors); all bylines stay «دوپینگ شیمی» (`teacherReviewed: false`) until the
+  teacher reads them. Contract and recipes: [ARCHITECTURE.md §14](docs/ARCHITECTURE.md#14-seo); teacher questions:
+  [docs/CONTENT-BRIEFS.md](docs/CONTENT-BRIEFS.md); owner GSC/off-site steps: TODO.md «سئو». GSC is verified.
 
 Top open items (details in [docs/TODO.md](docs/TODO.md); who acts in brackets):
 1. [owner] Keep the admin password off the seed default (Admin → «تنظیمات» → «تغییر رمز», or the reset in
@@ -124,6 +134,9 @@ Top open items (details in [docs/TODO.md](docs/TODO.md); who acts in brackets):
    set prices and bundles (recipe: [OPERATIONS.md §15](docs/OPERATIONS.md#15-admin-recipes-owner-tasks-in-the-admin-panel-no-deploy-needed)).
 7. [owner] SMS setup: provider, key, sender line, server IP whitelist, test; re-register rejected templates without links
    and enter their codes in `/admin/sms`.
+8. [owner commits/deploys, teacher reviews] Ship the SEO build at a quiet hour (ideally by 1405/9/5–9/10, before the Dey
+   exams), then the GSC steps in TODO.md «سئو». The teacher skims the chapter/quiz pages and answers CONTENT-BRIEFS.md;
+   flip `teacherReviewed` per page only after he has read it.
 
 ## First 15 minutes (checklist for a new AI)
 
