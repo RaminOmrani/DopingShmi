@@ -25,6 +25,16 @@ const nextConfig: NextConfig = {
           { key: "Service-Worker-Allowed", value: "/" },
         ],
       },
+      // فونت‌های خودمیزبان (نام فایل هش ندارد؛ اگر فونت عوض شد، نام فایل را هم عوض کنید)
+      {
+        source: "/fonts/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=2592000, stale-while-revalidate=86400" }],
+      },
+      // تصویر پیش‌نمایش اشتراک‌گذاری (og:image)
+      {
+        source: "/og.:ext(jpg|png)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
+      },
       {
         source: "/(.*)",
         headers: [

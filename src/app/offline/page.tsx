@@ -1,6 +1,7 @@
+import type { Metadata } from "next";
 import { WifiOff } from "lucide-react";
 
-export const metadata = { title: "آفلاین" };
+export const metadata: Metadata = { title: "آفلاین", robots: { index: false, follow: true } };
 
 export default function Offline() {
   return (

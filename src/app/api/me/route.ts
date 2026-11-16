@@ -1,7 +1,38 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { body, HttpError, mustUser, ok, route } from "@/lib/api";
+import { getUser, isAdmin } from "@/lib/auth";
+import { getAccess } from "@/lib/access";
 import { normalizePhone } from "@/lib/utils";
+
+const idParam = z.string().regex(/^[\w-]{1,64}$/);
+
+/**
+ * وضعیت ورود برای جزیره‌های کلاینت صفحه‌های عمومی (هدر سایت و دکمه‌ی خرید)؛ آن صفحه‌ها ایستا هستند و کوکی نمی‌خوانند.
+ * پاسخ: { user: { name, admin } | null }. با ?topic=<id> دسترسی همین کاربر به آن مبحث (owned، expires، done)
+ * و با ?bundle=<id> مالکیت بسته هم برمی‌گردد. پاسخ‌ها no-store و Vary: Cookie هستند (ok در lib/api).
+ */
+export const GET = route(async (req) => {
+  const user = await getUser();
+  const me = user ? { name: user.name, admin: isAdmin(user) } : null;
+  const q = new URL(req.url).searchParams;
+  const topicId = q.get("topic");
+  const bundleId = q.get("bundle");
+  if (!user || (!topicId && !bundleId)) return ok({ user: me });
+  if (!idParam.safeParse(topicId ?? bundleId).success) throw new HttpError(400, "شناسه نامعتبر است");
+  const access = await getAccess(user);
+  if (topicId) {
+    const videos = await db.video.findMany({ where: { topicId, published: true }, select: { id: true } });
+    const done = videos.length
+      ? await db.videoProgress.findMany({ where: { userId: user.id, videoId: { in: videos.map((v) => v.id) }, completed: true }, select: { videoId: true } })
+      : [];
+    const expires = access.expires.get(topicId);
+    return ok({ user: me, owned: access.all || access.topicIds.has(topicId), expires: expires ? expires.toISOString() : null, done: done.map((p) => p.videoId) });
+  }
+  const b = await db.bundle.findUnique({ where: { id: bundleId! }, select: { topics: { where: { published: true }, select: { id: true } } } });
+  const owned = !!b && b.topics.length > 0 && b.topics.every((t) => access.all || access.topicIds.has(t.id));
+  return ok({ user: me, owned });
+});
 
 const schema = z.object({
   name: z.string().trim().min(3, "نام و نام خانوادگی را کامل وارد کنید").max(60),

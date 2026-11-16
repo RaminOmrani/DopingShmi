@@ -2,7 +2,8 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AdminNav } from "@/components/admin/AdminNav";
 
-export const metadata = { title: { default: "پنل مدیریت", template: "%s | مدیریت دوپینگ شیمی" } };
+// noindex,follow: صفحه‌های مدیریت هرگز در نتایج جست‌وجو نمی‌آیند (robots.txt هم آن‌ها را بسته است)
+export const metadata = { title: { default: "پنل مدیریت", template: "%s | مدیریت دوپینگ شیمی" }, robots: { index: false, follow: true } };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();

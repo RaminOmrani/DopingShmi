@@ -1,0 +1,18 @@
+import type { Metadata } from "next";
+import { chapterParams } from "@/lib/site-routes";
+import { ChapterPage, chapterMetadata } from "@/components/chapter/ChapterPage";
+
+/** صفحه‌ی فصل‌های شیمی دوازدهم (/shimi-davazdahom/fasl-N)؛ فصل بدون محتوا و نشانی ناشناخته ۴۰۴ می‌دهد */
+export const revalidate = 300;
+export const dynamicParams = false;
+export const generateStaticParams = () => chapterParams("G12");
+
+type Props = { params: Promise<{ fasl: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return chapterMetadata("G12", (await params).fasl);
+}
+
+export default async function Page({ params }: Props) {
+  return <ChapterPage g="G12" fasl={(await params).fasl} />;
+}

@@ -15,6 +15,9 @@ export interface SiteContent {
   telegram: string;
   bale: string;
   instagram: string;
+  /** صفحه‌ی رسمی آپارات و یوتیوب (اختیاری؛ در فوتر و sameAs داده‌ی ساختاریافته‌ی استاد و مجموعه) */
+  aparat: string;
+  youtube: string;
   address: string;
   mapUrl: string;
   footerText: string;
@@ -115,6 +118,8 @@ export const DEFAULT_SETTINGS: Settings = {
     telegram: "https://t.me/+989158148172",
     bale: "https://ble.ir/+989158148172",
     instagram: "",
+    aparat: "",
+    youtube: "",
     address: "مشهد",
     mapUrl: "",
     footerText: "تمامی حقوق برای دوپینگ شیمی محفوظ است.",

@@ -1,18 +1,33 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { GRADES, gradeLabel } from "@/lib/constants";
+import { getSetting } from "@/lib/settings";
+import { THIN_TOPIC_DESC } from "@/lib/seo";
+import { pageMeta, eduGraph, itemListLd, canonicalUrl } from "@/lib/page-meta";
+import { GRADE_PAGES, type GradeKey } from "@/lib/syllabus";
+import { crumbsFor } from "@/lib/site-routes";
+import { JsonLd } from "@/components/JsonLd";
+import { Breadcrumbs } from "@/components/seo/EduChrome";
 import { faNum, fmtToman } from "@/lib/utils";
-import { PlayCircle, Gift, Package } from "lucide-react";
+import { PlayCircle, Gift, Package, ChevronLeft } from "lucide-react";
 
-export const metadata = {
-  title: "ویدیوهای آموزشی شیمی دهم، یازدهم، دوازدهم و کنکور",
-  description: "ویدیوهای تدریس شیمی مبحث‌به‌مبحث با استاد جواد پرتویی — دوپینگ شیمی. از هر مبحث یک جلسه رایگان.",
-  alternates: { canonical: "/courses" },
-};
 export const revalidate = 60;
 
+const PATH = "/courses";
+// عنوان «ویدیو»محور تا با صفحه‌های فصل (خلاصه و نمونه سوال) رقابت نکند
+const TITLE = "ویدیوهای آموزش شیمی دهم تا دوازدهم | دوپینگ شیمی";
+const desc = (teacher: string) =>
+  `ویدیوهای تدریس شیمی مبحث‌به‌مبحث با استاد ${teacher}؛ شیمی دهم، یازدهم، دوازدهم و کنکور. از هر مبحث یک جلسه رایگان ببینید و مبحث یا بسته‌ی جامع را تهیه کنید.`;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSetting("site");
+  return pageMeta({ title: TITLE, description: desc(s.teacherName), path: PATH });
+}
+
 export default async function Courses() {
-  const [topics, bundles] = await Promise.all([
+  const [s, topics, bundles] = await Promise.all([
+    getSetting("site"),
     db.topic.findMany({
       where: { published: true },
       orderBy: [{ grade: "asc" }, { order: "asc" }],
@@ -21,8 +36,24 @@ export default async function Courses() {
     db.bundle.findMany({ where: { active: true }, orderBy: { order: "asc" }, include: { _count: { select: { topics: true } } } }),
   ]);
   const groups = [...GRADES.map((g) => g.value as string), "ALL"].map((g) => ({ g, items: topics.filter((t) => t.grade === g) })).filter((x) => x.items.length);
+  const crumbs = crumbsFor(PATH);
+  // فهرست ساختاریافته فقط مباحثی که خودشان index می‌شوند (ویدیو یا توضیح کافی دارند)
+  const listed = topics.filter((t) => t.videos.length > 0 || (t.description?.trim().length ?? 0) >= THIN_TOPIC_DESC).map((t) => ({ name: t.title, path: `/courses/${t.id}` }));
+  const listId = `${canonicalUrl(PATH)}#list`;
   return (
     <main className="mx-auto max-w-7xl px-5 pb-10 pt-32">
+      <JsonLd
+        data={eduGraph(s, {
+          path: PATH,
+          title: TITLE,
+          description: desc(s.teacherName),
+          type: "CollectionPage",
+          breadcrumb: crumbs,
+          nodes: listed.length ? [itemListLd("ویدیوهای آموزش شیمی", listed, listId)] : [],
+          extra: listed.length ? { mainEntity: { "@id": listId } } : {},
+        })}
+      />
+      <Breadcrumbs items={crumbs} />
       <p className="mb-2 text-sm font-bold text-cyan">ویدیوهای آموزشی</p>
       <h1 className="section-title mb-4">شیمی، <span className="text-gradient">مبحث‌به‌مبحث</span></h1>
       <p className="mb-10 max-w-2xl leading-8 text-white/60">شاگردان کلاس‌های استاد پس از تأیید به همه‌ی ویدیوها دسترسی دارند. بقیه‌ی دوستان می‌توانند از هر مبحث یک جلسه را رایگان ببینند و مبحث یا بسته‌ی جامع را تهیه کنند.</p>
@@ -44,7 +75,14 @@ export default async function Courses() {
       {groups.length === 0 && <div className="card p-16 text-center text-white/50">به‌زودی ویدیوها منتشر می‌شوند.</div>}
       {groups.map(({ g, items }) => (
         <section key={g} className="mb-12">
-          <h2 className="mb-5 text-2xl font-black">شیمی {gradeLabel(g)}</h2>
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <h2 className="text-2xl font-black">ویدیوهای شیمی {gradeLabel(g)}</h2>
+            {g in GRADE_PAGES && (
+              <Link href={GRADE_PAGES[g as GradeKey].path} className="flex items-center gap-1 text-sm text-cyan hover:underline">
+                سرفصل‌ها و نکات شیمی {gradeLabel(g)} <ChevronLeft className="size-4" />
+              </Link>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((t) => {
               const free = t.videos.filter((v) => v.isFree).length;

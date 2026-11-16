@@ -2,6 +2,9 @@ import Link from "next/link";
 import { MoleculeCanvas } from "@/components/site/MoleculeCanvas";
 import { ThemeToggle } from "@/components/Theme";
 
+// فقط متادیتا: صفحه‌های ورود و ثبت‌نام noindex,follow (بدون canonical نشتی از layout ریشه)
+export const metadata = { robots: { index: false, follow: true } };
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <main className="relative grid min-h-dvh place-items-center px-4 py-10">

@@ -20,6 +20,8 @@
     "db:studio": "prisma studio",
     "icons": "tsx scripts/make-icons.ts",
     "e2e": "node tests/e2e/run.mjs",
+    "seo:check": "tsx scripts/seo-check.ts",
+    "test:chem": "node --import tsx --test src/lib/chem/*.test.ts src/components/seo/*.test.ts src/content/*/*.test.ts src/components/chapter/*.test.ts src/components/quiz/*.test.ts",
     "postinstall": "prisma generate"
   },
   "pnpm": {

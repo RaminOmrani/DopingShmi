@@ -3,6 +3,7 @@ import { getSetting } from "@/lib/settings";
 import { PageHead, Field } from "@/components/admin/ui";
 import { Form, Submit } from "@/components/admin/Form";
 import { saveContent } from "../settings/actions";
+import { saveProfiles } from "./actions";
 import { requireAdmin } from "@/lib/auth";
 
 export const metadata = { title: "متن‌های سایت" };
@@ -54,6 +55,16 @@ export default async function Content() {
           <Field label="کد تأیید Bing (msvalidate.01)"><input name="bingVerification" defaultValue={s.bingVerification} className="input" dir="ltr" /></Field>
         </section>
         <Submit className="btn-primary w-full !py-4">ذخیره همه</Submit>
+      </Form>
+      {/* فرم جدا: این دو فیلد با saveProfiles ذخیره می‌شوند و فرم بالا به آن‌ها دست نمی‌زند */}
+      <Form action={saveProfiles} className="card mt-5 grid gap-3 p-5 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <h2 className="font-black">صفحه‌های رسمی ویدیو (برای گوگل)</h2>
+          <p className="mt-1 text-xs leading-6 text-white/50">نشانی کامل صفحه‌ی آپارات و یوتیوب استاد. در فوتر سایت و در اطلاعات ساختاریافته‌ی استاد و «دوپینگ شیمی» می‌آید. اگر صفحه‌ای ندارید خالی بگذارید.</p>
+        </div>
+        <Field label="صفحه‌ی آپارات"><input name="aparat" defaultValue={s.aparat} className="input" dir="ltr" placeholder="https://www.aparat.com/..." /></Field>
+        <Field label="کانال یوتیوب"><input name="youtube" defaultValue={s.youtube} className="input" dir="ltr" placeholder="https://www.youtube.com/@..." /></Field>
+        <Submit className="btn-primary sm:col-span-2">ذخیره صفحه‌ها</Submit>
       </Form>
     </div>
   );

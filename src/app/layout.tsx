@@ -1,11 +1,17 @@
 import type { Metadata, Viewport } from "next";
-import "@fontsource-variable/vazirmatn";
+import { preload } from "react-dom";
 import "./globals.css";
 import { Toaster } from "@/components/ui/Toast";
 import { themeInitScript } from "@/components/Theme";
 import { getSetting } from "@/lib/settings";
 import { KEYWORDS, SITE_URL } from "@/lib/seo";
+import { DEFAULT_OG_IMAGE } from "@/lib/page-meta";
 
+/**
+ * متادیتای پایه‌ی همه‌ی صفحه‌ها. عمداً canonical، og:url و عنوان/توضیح Open Graph ندارد:
+ * ادغام متادیتا در Next سطحی است و این‌ها به هر صفحه‌ای که خودش تعیین نکرده نشت می‌کرد
+ * (مثلاً canonical «/» روی /gallery و صفحه‌ی ۴۰۴). صفحه‌های عمومی همه را با pageMeta می‌سازند.
+ */
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getSetting("site");
   return {
@@ -17,7 +23,6 @@ export async function generateMetadata(): Promise<Metadata> {
     authors: [{ name: site.teacherName, url: `${SITE_URL}/javad-partovi` }],
     creator: site.teacherName,
     publisher: site.brand,
-    alternates: { canonical: "/" },
     appleWebApp: { capable: true, title: site.brand, statusBarStyle: "black-translucent" },
     icons: {
       icon: [{ url: "/icons/favicon-64.png", sizes: "64x64" }, { url: "/logo.svg", type: "image/svg+xml" }],
@@ -27,13 +32,11 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       locale: "fa_IR",
       siteName: site.brand,
-      title: site.seoTitle,
-      description: site.seoDescription,
-      url: SITE_URL,
-      images: [{ url: "/og.png", width: 1200, height: 630, alt: `${site.brand} — استاد ${site.teacherName}` }],
+      images: [{ url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: `${site.brand}، استاد ${site.teacherName}` }],
     },
-    twitter: { card: "summary_large_image", title: site.seoTitle, description: site.seoDescription, images: ["/og.png"] },
-    robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
+    twitter: { card: "summary_large_image", images: [DEFAULT_OG_IMAGE] },
+    // فقط تنظیمات گوگل‌بات؛ index/follow پیش‌فرض است و صفحه‌ی ۴۰۴ فقط یک متای robots (noindex) می‌گیرد
+    robots: { googleBot: { "max-image-preview": "large", "max-snippet": -1 } },
     verification: {
       google: site.googleVerification || undefined,
       other: site.bingVerification ? { "msvalidate.01": site.bingVerification } : undefined,
@@ -50,6 +53,8 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // زیرمجموعه‌ی فارسی فونت از همان ابتدا دانلود شود (پیش از خواندن CSS) تا جابه‌جایی متن (CLS) کم شود
+  preload("/fonts/vazirmatn-arabic-wght-normal.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   return (
     <html lang="fa" dir="rtl" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>

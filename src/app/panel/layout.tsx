@@ -3,6 +3,9 @@ import { SideNav, BottomNav } from "@/components/panel/PanelNav";
 import { Heartbeat } from "@/components/panel/Heartbeat";
 import { WatchMarker } from "@/components/panel/WatchMarker";
 
+// فقط متادیتا: پنل شخصی است و نباید در نتایج جست‌وجو بیاید
+export const metadata = { robots: { index: false, follow: true } };
+
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   return (
